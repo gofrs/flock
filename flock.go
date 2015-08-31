@@ -85,18 +85,12 @@ func (f *Flock) Unlock() error {
 		return nil
 	}
 
-	// release the lock
-	if err := syscall.Flock(int(f.fh.Fd()), syscall.LOCK_UN); err != nil {
-		return err
-	}
+	// remove the file from disk
+	// and close the file descriptor
+	err := os.Remove(f.fh.Name())
+	f.fh.Close()
 
 	f.l = false
-
-	// close the file descriptor
-	// and remove the file from disk
-	f.fh.Close()
-	err := os.Remove(f.fh.Name())
-
 	f.fh = nil
 
 	return err
