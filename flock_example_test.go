@@ -10,6 +10,19 @@ import (
 	"github.com/theckman/go-flock"
 )
 
+func ExampleFlock_Locked() {
+	f := flock.NewFlock("/tmp/go-lock.lock")
+	f.TryLock() // unchecked errors here
+
+	fmt.Printf("locked: %v\n", f.Locked())
+
+	f.Unlock()
+
+	fmt.Printf("locked: %v\n", f.Locked())
+	// Output: locked: true
+	// locked: false
+}
+
 func ExampleFlock_TryLock() {
 	// should probably put these in /var/lock
 	fileLock := flock.NewFlock("/tmp/go-lock.lock")
