@@ -112,7 +112,7 @@ func (f *Flock) Unlock() error {
 //
 // The actual file lock is non-blocking. If we are unable to get the exclusive
 // file lock, the function will return false instead of waiting for the lock.
-// If we get the lock, we also set the *Flock insteance to being locked.
+// If we get the lock, we also set the *Flock instance as being locked.
 func (f *Flock) TryLock() (bool, error) {
 	f.m.Lock()
 	defer f.m.Unlock()
