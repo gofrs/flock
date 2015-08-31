@@ -54,6 +54,10 @@ func (f *Flock) Lock() error {
 	f.m.Lock()
 	defer f.m.Unlock()
 
+	if f.l {
+		return nil
+	}
+
 	if f.fh == nil {
 		if err := f.setFh(); err != nil {
 			return err
