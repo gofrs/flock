@@ -119,4 +119,29 @@ func (t *TestSuite) TestFlock_Lock(c *C) {
 	locked, err := t.flock.TryLock()
 	c.Assert(err, IsNil)
 	c.Check(locked, Equals, true)
+
+	//
+	// Test that Lock() is a blocking call
+	//
+	ch := make(chan error, 2)
+	gf := flock.NewFlock(t.path)
+
+	go func(ch chan<- error) {
+		ch <- nil
+		ch <- gf.Lock()
+		close(ch)
+	}(ch)
+
+	errCh, ok := <-ch
+	c.Assert(ok, Equals, true)
+	c.Assert(errCh, IsNil)
+
+	err = t.flock.Unlock()
+	c.Assert(err, IsNil)
+
+	errCh, ok = <-ch
+	c.Assert(ok, Equals, true)
+	c.Assert(errCh, IsNil)
+	c.Check(t.flock.Locked(), Equals, false)
+	c.Check(gf.Locked(), Equals, true)
 }
