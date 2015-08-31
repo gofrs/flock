@@ -116,15 +116,16 @@ func (t *TestSuite) TestFlock_Lock(c *C) {
 	c.Assert(err, IsNil)
 	c.Check(t.flock.Locked(), Equals, true)
 
-	locked, err := t.flock.TryLock()
+	// test that the short-circuit works
+	err = t.flock.Lock()
 	c.Assert(err, IsNil)
-	c.Check(locked, Equals, true)
 
 	//
 	// Test that Lock() is a blocking call
 	//
 	ch := make(chan error, 2)
 	gf := flock.NewFlock(t.path)
+	defer gf.Unlock()
 
 	go func(ch chan<- error) {
 		ch <- nil
