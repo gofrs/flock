@@ -98,7 +98,7 @@ func (f *Flock) Unlock() error {
 	err := os.Remove(f.fh.Name())
 
 	// if we removed the file properly: make the handler nil
-	if err != nil {
+	if err == nil {
 		f.fh = nil
 	}
 
