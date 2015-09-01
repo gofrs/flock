@@ -43,6 +43,10 @@ func (f *Flock) Locked() bool {
 	return f.l
 }
 
+func (f *Flock) String() string {
+	return f.path
+}
+
 // Lock is a blocking call to try and take the file lock. It will wait until it
 // is able to obtain the exclusive file lock. It's recommended that TryLock() be
 // used over this function. This function may block the ability to query the
