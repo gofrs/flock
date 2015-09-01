@@ -62,6 +62,12 @@ func (t *TestSuite) TestFlock_Locked(c *C) {
 	c.Check(locked, Equals, false)
 }
 
+func (t *TestSuite) TestFlock_String(c *C) {
+	var str string
+	str = t.flock.String()
+	c.Assert(str, Equals, t.path)
+}
+
 func (t *TestSuite) TestFlock_TryLock(c *C) {
 	c.Assert(t.flock.Locked(), Equals, false)
 
