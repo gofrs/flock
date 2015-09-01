@@ -108,9 +108,6 @@ func (t *TestSuite) TestFlock_Unlock(c *C) {
 	err = t.flock.Unlock()
 	c.Assert(err, IsNil)
 	c.Check(t.flock.Locked(), Equals, false)
-
-	_, err = os.Stat(t.path)
-	c.Assert(os.IsNotExist(err), Equals, true)
 }
 
 func (t *TestSuite) TestFlock_Lock(c *C) {

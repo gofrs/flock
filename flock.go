@@ -80,9 +80,8 @@ func (f *Flock) Lock() error {
 // while it is running the Locked() function will be blocked.
 //
 // This function short-circuits if we are unlocked already. If not, it calls
-// syscall.LOCK_UN on the file, closes the file descriptor, and removes the file
-// from disk. If the removal is successful, it also marks the *os.File instance
-// for GC by setting it to nil.
+// syscall.LOCK_UN on the file and closes the file descriptor It does not remove
+// the file from disk. It's up to your application to do.
 func (f *Flock) Unlock() error {
 	f.m.Lock()
 	defer f.m.Unlock()
@@ -93,15 +92,17 @@ func (f *Flock) Unlock() error {
 		return nil
 	}
 
-	// remove the file from disk
-	// and close the file descriptor
-	err := os.Remove(f.fh.Name())
+	// mark the file as unlocked
+	if err := syscall.Flock(int(f.fh.Fd()), syscall.LOCK_UN); err != nil {
+		return err
+	}
+
 	f.fh.Close()
 
 	f.l = false
 	f.fh = nil
 
-	return err
+	return nil
 }
 
 // TryLock is the preferred function for taking a file lock. This function does
