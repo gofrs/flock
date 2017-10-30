@@ -5,9 +5,11 @@
 package flock_test
 
 import (
+	"context"
 	"io/ioutil"
 	"os"
 	"testing"
+	"time"
 
 	"github.com/theckman/go-flock"
 
@@ -87,6 +89,27 @@ func (t *TestSuite) TestFlock_TryLock(c *C) {
 	// where we would have been blocked
 	locked, err = flock.NewFlock(t.path).TryLock()
 	c.Assert(err, IsNil)
+	c.Check(locked, Equals, false)
+}
+
+func (t *TestSuite) TestFlock_TryLockContext(c *C) {
+	// happy path
+	ctx, cancel := context.WithCancel(context.Background())
+	locked, err := t.flock.TryLockContext(ctx, time.Second)
+	c.Assert(err, IsNil)
+	c.Check(locked, Equals, true)
+
+	// context already canceled
+	cancel()
+	locked, err = flock.NewFlock(t.path).TryLockContext(ctx, time.Second)
+	c.Assert(err, Equals, context.Canceled)
+	c.Check(locked, Equals, false)
+
+	// timeout
+	ctx, cancel = context.WithTimeout(context.Background(), 10*time.Millisecond)
+	defer cancel()
+	locked, err = flock.NewFlock(t.path).TryLockContext(ctx, time.Second)
+	c.Assert(err, Equals, context.DeadlineExceeded)
 	c.Check(locked, Equals, false)
 }
 

@@ -5,7 +5,9 @@
 package flock_test
 
 import (
+	"context"
 	"fmt"
+	"time"
 
 	"github.com/theckman/go-flock"
 )
@@ -28,6 +30,31 @@ func ExampleFlock_TryLock() {
 	fileLock := flock.NewFlock("/tmp/go-lock.lock")
 
 	locked, err := fileLock.TryLock()
+
+	if err != nil {
+		// handle locking error
+	}
+
+	if locked {
+		fmt.Printf("path: %s; locked: %v\n", fileLock.Path(), fileLock.Locked())
+
+		if err := fileLock.Unlock(); err != nil {
+			// handle unlock error
+		}
+	}
+
+	fmt.Printf("path: %s; locked: %v\n", fileLock.Path(), fileLock.Locked())
+	// Output: path: /tmp/go-lock.lock; locked: true
+	// path: /tmp/go-lock.lock; locked: false
+}
+
+func ExampleFlock_TryLockContext() {
+	// should probably put these in /var/lock
+	fileLock := flock.NewFlock("/tmp/go-lock.lock")
+
+	lockCtx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
+	defer cancel()
+	locked, err := fileLock.TryLockContext(lockCtx, 678*time.Millisecond)
 
 	if err != nil {
 		// handle locking error

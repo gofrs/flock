@@ -11,8 +11,10 @@
 package flock
 
 import (
+	"context"
 	"os"
 	"sync"
+	"time"
 )
 
 // Flock is the struct type to handle file locking. All fields are unexported,
@@ -44,6 +46,25 @@ func (f *Flock) Locked() bool {
 
 func (f *Flock) String() string {
 	return f.path
+}
+
+// TryLockContext repeatedly tries locking until one of the conditions is met:
+// TryLock succeeds, TryLock fails with error, or Context Done channel is closed.
+func (f *Flock) TryLockContext(ctx context.Context, retryDelay time.Duration) (bool, error) {
+	if ctx.Err() != nil {
+		return false, ctx.Err()
+	}
+	for {
+		if ok, err := f.TryLock(); ok || err != nil {
+			return ok, err
+		}
+		select {
+		case <-ctx.Done():
+			return false, ctx.Err()
+		case <-time.After(retryDelay):
+			// try again
+		}
+	}
 }
 
 func (f *Flock) setFh() error {
