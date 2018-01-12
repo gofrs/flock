@@ -8,6 +8,10 @@ import (
 	"syscall"
 )
 
+// ErrorLockViolation is the error code returned from the Windows syscall when a
+// lock would block and you ask to fail immediately.
+const ErrorLockViolation syscall.Errno = 0x21 // 33
+
 // Lock is a blocking call to try and take the file lock. It will wait until it
 // is able to obtain the exclusive file lock. It's recommended that TryLock() be
 // used over this function. This function may block the ability to query the
@@ -29,8 +33,8 @@ func (f *Flock) Lock() error {
 		}
 	}
 
-	if _, err := lockFileEx(syscall.Handle(f.fh.Fd()), LOCKFILE_EXCLUSIVE_LOCK, 0, 1, 0, &syscall.Overlapped{}); err != nil {
-		return err
+	if _, errNo := lockFileEx(syscall.Handle(f.fh.Fd()), winLockfileExclusiveLock, 0, 1, 0, &syscall.Overlapped{}); errNo > 0 {
+		return errNo
 	}
 
 	f.l = true
@@ -54,8 +58,8 @@ func (f *Flock) Unlock() error {
 	}
 
 	// mark the file as unlocked
-	if _, err := unlockFileEx(syscall.Handle(f.fh.Fd()), 0, 1, 0, &syscall.Overlapped{}); err != nil {
-		return err
+	if _, errNo := unlockFileEx(syscall.Handle(f.fh.Fd()), 0, 1, 0, &syscall.Overlapped{}); errNo > 0 {
+		return errNo
 	}
 
 	f.fh.Close()
@@ -88,13 +92,17 @@ func (f *Flock) TryLock() (bool, error) {
 		}
 	}
 
-	_, err := lockFileEx(syscall.Handle(f.fh.Fd()), LOCKFILE_EXCLUSIVE_LOCK|LOCKFILE_FAIL_IMMEDIATELY, 0, 1, 0, &syscall.Overlapped{})
+	_, errNo := lockFileEx(syscall.Handle(f.fh.Fd()), winLockfileExclusiveLock|winLockfileFailImmediately, 0, 1, 0, &syscall.Overlapped{})
 
-	switch err {
-	case nil:
-		f.l = true
-		return true, nil
+	if errNo > 0 {
+		if errNo == ErrorLockViolation || errNo == syscall.ERROR_IO_PENDING {
+			return false, nil
+		}
+
+		return false, errNo
 	}
 
-	return false, err
+	f.l = true
+
+	return true, nil
 }
