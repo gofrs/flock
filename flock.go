@@ -33,6 +33,11 @@ func NewFlock(path string) *Flock {
 	return &Flock{path: path}
 }
 
+// New returns a new instance of *Flock. The sole argument is an *os.File.
+func New(fh *os.File) *Flock {
+	return &Flock{fh: fh, path: fh.Name()}
+}
+
 // Path is a function to return the path as provided in NewFlock().
 func (f *Flock) Path() string {
 	return f.path

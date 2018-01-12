@@ -53,6 +53,18 @@ func (t *TestSuite) TestNewFlock(c *C) {
 	c.Check(f.RLocked(), Equals, false)
 }
 
+func (t *TestSuite) TestNew(c *C) {
+	fh, err := os.Create(t.path)
+	c.Assert(err, IsNil)
+	c.Assert(fh, Not(IsNil))
+
+	f := flock.New(fh)
+	c.Assert(f, Not(IsNil))
+	c.Check(f.Path(), Equals, t.path)
+	c.Check(f.Locked(), Equals, false)
+	c.Check(f.RLocked(), Equals, false)
+}
+
 func (t *TestSuite) TestFlock_Path(c *C) {
 	var path string
 	path = t.flock.Path()
