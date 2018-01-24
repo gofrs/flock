@@ -17,6 +17,12 @@ import (
 //
 // If we are already exclusive-locked, this function short-circuits and returns
 // immediately assuming it can take the mutex lock.
+//
+// If the *Flock has a shared lock (RLock), this may transparently replace the
+// shared lock with an exclusive lock on some UNIX-like operating systems. Be
+// careful when using exclusive locks in conjunction with shared locks
+// (RLock()), because calling Unlock() may accidentally release the exclusive
+// lock that was once a shared lock.
 func (f *Flock) Lock() error {
 	return f.lock(&f.l, syscall.LOCK_EX)
 }
@@ -60,6 +66,10 @@ func (f *Flock) lock(locked *bool, flag int) error {
 // This function short-circuits if we are unlocked already. If not, it calls
 // syscall.LOCK_UN on the file and closes the file descriptor. It does not
 // remove the file from disk. It's up to your application to do.
+//
+// Please note, if your shared lock became an exclusive lock this may
+// unintentionally drop the exclusive lock if called by the consumer that
+// believes they have a shared lock. Please see Lock() for more details.
 func (f *Flock) Unlock() error {
 	f.m.Lock()
 	defer f.m.Unlock()

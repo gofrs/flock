@@ -8,6 +8,12 @@
 //
 // Package flock is released under the BSD 3-Clause License. See the LICENSE file
 // for more details.
+//
+// While using this library, remember that the locking behaviors are not
+// guaranteed to be the same on each platform. For example, some UNIX-like
+// operating systems will transparently convert a shared lock to an exclusive
+// lock. If you Unlock() the flock from a location where you believe that you
+// have the shared lock, you may accidently drop the exclusive lock.
 package flock
 
 import (
