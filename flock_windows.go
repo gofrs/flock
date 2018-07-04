@@ -65,6 +65,11 @@ func (f *Flock) lock(locked *bool, flag uint32) error {
 func (f *Flock) Unlock() error {
 	f.m.Lock()
 	defer f.m.Unlock()
+	return f.unlockInternal()
+}
+
+// the internal mutex must be held for reading+writing when calling this function
+func (f *Flock) unlockInternal() error {
 
 	// if we aren't locked or if the lockfile instance is nil
 	// just return a nil error because we are unlocked

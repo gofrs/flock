@@ -287,3 +287,31 @@ func (t *TestSuite) TestFlock_RLock(c *C) {
 	c.Check(gf.Locked(), Equals, false)
 	c.Check(gf.RLocked(), Equals, true)
 }
+
+func (t *TestSuite) TestFlock_Close(c *C) {
+	var err error
+
+	err = t.flock.Unlock()
+	c.Assert(err, IsNil)
+
+	// get a lock for us to unlock
+	locked, err := t.flock.TryLock()
+	c.Assert(err, IsNil)
+	c.Assert(locked, Equals, true)
+	c.Assert(t.flock.Locked(), Equals, true)
+	c.Check(t.flock.RLocked(), Equals, false)
+
+	_, err = os.Stat(t.path)
+	c.Assert(os.IsNotExist(err), Equals, false)
+
+	err = t.flock.Close()
+	c.Assert(err, IsNil)
+	c.Check(t.flock.Locked(), Equals, false)
+	c.Check(t.flock.RLocked(), Equals, false)
+
+	// ensure we can call it again without effect
+	err = t.flock.Close()
+	c.Assert(err, IsNil)
+	c.Check(t.flock.Locked(), Equals, false)
+	c.Check(t.flock.RLocked(), Equals, false)
+}
