@@ -39,6 +39,25 @@ func NewFlock(path string) *Flock {
 	return &Flock{path: path}
 }
 
+// Close will call Unlock() and close the underlying file descriptor. Use of this
+// function is not strictly necessary as the file descriptor will be cleaned up
+// by the garbage collector, but some long lived applications may not want to
+// depend on that
+func (f *Flock) Close() error {
+	f.m.Lock()
+	defer f.m.Unlock()
+
+	f.unlockInternal()
+	if f.fh == nil {
+		return nil
+	}
+
+	// ignore close errors because unlockInternal ignores it too
+	f.fh.Close()
+	f.fh = nil
+	return nil
+}
+
 // Path is a function to return the path as provided in NewFlock().
 func (f *Flock) Path() string {
 	return f.path
