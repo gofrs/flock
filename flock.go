@@ -39,6 +39,14 @@ func NewFlock(path string) *Flock {
 	return &Flock{path: path}
 }
 
+// Close is equivalent to calling Unlock.
+//
+// This will release the lock and close the underlying file descriptor.
+// It will not remove the file from disk, that's up to your application.
+func (f *Flock) Close() error {
+	return f.Unlock()
+}
+
 // Path is a function to return the path as provided in NewFlock().
 func (f *Flock) Path() string {
 	return f.path
