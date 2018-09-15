@@ -28,7 +28,7 @@ func (f *Flock) Lock() error {
 	return f.lock(&f.l, syscall.LOCK_EX)
 }
 
-// RLock is a blocking call to try and take a ahred file lock. It will wait
+// RLock is a blocking call to try and take a shared file lock. It will wait
 // until it is able to obtain the shared file lock. It's recommended that
 // TryRLock() be used over this function. This function may block the ability to
 // query the current Locked() or RLocked() status due to a RW-mutex lock.
