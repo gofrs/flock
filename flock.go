@@ -53,6 +53,7 @@ func (f *Flock) Path() string {
 }
 
 // Locked returns the lock state (locked: true, unlocked: false).
+//
 // Warning: by the time you use the returned value, the state may have changed.
 func (f *Flock) Locked() bool {
 	f.m.RLock()
@@ -61,6 +62,7 @@ func (f *Flock) Locked() bool {
 }
 
 // RLocked returns the read lock state (locked: true, unlocked: false).
+//
 // Warning: by the time you use the returned value, the state may have changed.
 func (f *Flock) RLocked() bool {
 	f.m.RLock()
