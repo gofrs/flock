@@ -1,4 +1,5 @@
 // Copyright 2015 Tim Heckman. All rights reserved.
+// Copyright 2018 The Gofrs. All rights reserved.
 // Use of this source code is governed by the BSD 3-Clause
 // license that can be found in the LICENSE file.
 
@@ -11,7 +12,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/theckman/go-flock"
+	"github.com/gofrs/flock"
 
 	. "gopkg.in/check.v1"
 )
