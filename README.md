@@ -22,7 +22,7 @@ go get -u github.com/gofrs/flock
 ```Go
 import "github.com/gofrs/flock"
 
-fileLock := flock.NewFlock("/var/lock/go-lock.lock")
+fileLock := flock.New("/var/lock/go-lock.lock")
 
 locked, err := fileLock.TryLock()
 

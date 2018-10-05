@@ -33,10 +33,18 @@ type Flock struct {
 	r    bool
 }
 
+// New returns a new instance of *Flock. The only parameter
+// it takes is the path to the desired lockfile.
+func New(path string) *Flock {
+	return &Flock{path: path}
+}
+
 // NewFlock returns a new instance of *Flock. The only parameter
 // it takes is the path to the desired lockfile.
+//
+// Deprecated: Use New instead.
 func NewFlock(path string) *Flock {
-	return &Flock{path: path}
+	return New(path)
 }
 
 // Close is equivalent to calling Unlock.
