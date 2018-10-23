@@ -2,7 +2,7 @@
 // Use of this source code is governed by the BSD 3-Clause
 // license that can be found in the LICENSE file.
 
-// Package flock implements a thread-safe sync.Locker interface for file locking.
+// Package flock implements a thread-safe interface for file locking.
 // It also includes a non-blocking TryLock() function to allow locking
 // without blocking execution.
 //
