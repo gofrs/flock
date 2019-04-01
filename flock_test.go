@@ -19,23 +19,30 @@ import (
 )
 
 type TestSuite struct {
+	isdir bool
 	path  string
 	flock *flock.Flock
 }
 
-var _ = Suite(&TestSuite{})
+func Test(t *testing.T) {
+	Suite(new(TestSuite))
+	if runtime.GOOS == "linux" {
+		Suite(&TestSuite{isdir: true})
+	}
 
-func Test(t *testing.T) { TestingT(t) }
+	TestingT(t)
+}
 
 func (t *TestSuite) SetUpTest(c *C) {
-	tmpFile, err := ioutil.TempFile(os.TempDir(), "go-flock-")
-	c.Assert(err, IsNil)
-	c.Assert(tmpFile, Not(IsNil))
-
-	t.path = tmpFile.Name()
-
-	defer os.Remove(t.path)
-	tmpFile.Close()
+	if t.isdir {
+		tmpDir, err := ioutil.TempDir("", "go-flock-")
+		c.Assert(err, IsNil)
+		t.path = tmpDir
+	} else {
+		tmpFile, err := ioutil.TempFile("", "go-flock-")
+		c.Assert(err, IsNil)
+		t.path = tmpFile.Name()
+	}
 
 	t.flock = flock.New(t.path)
 }
