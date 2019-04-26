@@ -9,6 +9,7 @@ import (
 	"context"
 	"io/ioutil"
 	"os"
+	"runtime"
 	"testing"
 	"time"
 
@@ -123,7 +124,16 @@ func (t *TestSuite) TestFlock_TryRLock(c *C) {
 	flock2 := flock.New(t.path)
 	locked, err = flock2.TryRLock()
 	c.Assert(err, IsNil)
-	c.Check(locked, Equals, true)
+	if runtime.GOOS == "aix" {
+		// When using POSIX locks, we can't safely read-lock the same
+		// inode through two different descriptors at the same time:
+		// when the first descriptor is closed, the second descriptor
+		// would still be open but silently unlocked. So a second
+		// TryRLock must return false.
+		c.Check(locked, Equals, false)
+	} else {
+		c.Check(locked, Equals, true)
+	}
 
 	// make sure we just return false with no error in cases
 	// where we would have been blocked
