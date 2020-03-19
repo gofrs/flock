@@ -21,7 +21,7 @@ func Test(t *testing.T) {
 	newLock := New(tmpFile)
 	locked, err = newLock.TryLock()
 	if locked != false || err != nil {
-		t.Fatal("should have failed locking")
+		t.Fatalf("should have failed locking: locked: %t, err: %v", locked, err)
 	}
 
 	if newLock.fh != nil {
