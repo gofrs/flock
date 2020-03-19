@@ -15,7 +15,7 @@ func Test(t *testing.T) {
 	lock := New(tmpFile)
 	locked, err := lock.TryLock()
 	if locked == false || err != nil {
-		t.Fatal("failed to lock")
+		t.Fatalf("failed to lock: locked: %t, err: %v", locked, err)
 	}
 
 	newLock := New(tmpFile)
