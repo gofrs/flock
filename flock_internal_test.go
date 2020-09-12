@@ -8,6 +8,9 @@ import (
 
 func Test(t *testing.T) {
 	tmpFileFh, err := ioutil.TempFile(os.TempDir(), "go-flock-")
+	if err != nil {
+		t.Fatalf("TempFile: %v", err)
+	}
 	tmpFileFh.Close()
 	tmpFile := tmpFileFh.Name()
 	os.Remove(tmpFile)
