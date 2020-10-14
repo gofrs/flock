@@ -202,7 +202,16 @@ func (f *Flock) setFh() error {
 	flags := os.O_CREATE | os.O_RDONLY
 	fh, err := os.OpenFile(f.path, flags, os.FileMode(0600))
 	if err != nil {
-		return err
+		// retry for directory
+		errno := err.(*os.PathError).Err.(syscall.Errno)
+		if errno == syscall.EISDIR {
+			fh, err = os.OpenFile(f.path, os.O_RDONLY, os.FileMode(0600))
+			if err != nil {
+				return err
+			}
+		} else {
+			return err
+		}
 	}
 
 	// set the filehandle on the struct
