@@ -5,6 +5,7 @@
 package flock
 
 import (
+	"os"
 	"syscall"
 )
 
@@ -139,4 +140,18 @@ func (f *Flock) try(locked *bool, flag uint32) (bool, error) {
 	*locked = true
 
 	return true, nil
+}
+
+func (f *Flock) setFh() error {
+	// open a new os.File instance
+	// create it if it doesn't exist, and open the file read-only.
+	flags := os.O_CREATE | os.O_RDONLY
+	fh, err := os.OpenFile(f.path, flags, os.FileMode(0600))
+	if err != nil {
+		return err
+	}
+
+	// set the filehandle on the struct
+	f.fh = fh
+	return nil
 }

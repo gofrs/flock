@@ -269,3 +269,19 @@ func setlkw(fd uintptr, lt lockType) error {
 		}
 	}
 }
+
+func (f *Flock) setFh() error {
+	// open a new os.File instance
+	// create it if it doesn't exist, and open the file read-only.
+	// AIX cannot preform write-lock (ie exclusive) on a
+	// read-only file.
+	flags := os.O_CREATE | os.O_RDWR
+	fh, err := os.OpenFile(f.path, flags, os.FileMode(0600))
+	if err != nil {
+		return err
+	}
+
+	// set the filehandle on the struct
+	f.fh = fh
+	return nil
+}
