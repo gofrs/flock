@@ -16,11 +16,18 @@ import (
 
 func ExampleFlock_Locked() {
 	f := flock.New(os.TempDir() + "/go-lock.lock")
-	f.TryLock() // unchecked errors here
+
+	_, err := f.TryLock()
+	if err != nil {
+		// handle locking error
+	}
 
 	fmt.Printf("locked: %v\n", f.Locked())
 
-	f.Unlock()
+	err = f.Unlock()
+	if err != nil {
+		// handle locking error
+	}
 
 	fmt.Printf("locked: %v\n", f.Locked())
 	// Output: locked: true
@@ -32,7 +39,6 @@ func ExampleFlock_TryLock() {
 	fileLock := flock.New(os.TempDir() + "/go-lock.lock")
 
 	locked, err := fileLock.TryLock()
-
 	if err != nil {
 		// handle locking error
 	}
@@ -54,8 +60,8 @@ func ExampleFlock_TryLockContext() {
 
 	lockCtx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
 	defer cancel()
-	locked, err := fileLock.TryLockContext(lockCtx, 678*time.Millisecond)
 
+	locked, err := fileLock.TryLockContext(lockCtx, 678*time.Millisecond)
 	if err != nil {
 		// handle locking error
 	}

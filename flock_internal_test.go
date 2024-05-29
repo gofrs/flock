@@ -1,13 +1,12 @@
 package flock
 
 import (
-	"io/ioutil"
 	"os"
 	"testing"
 )
 
 func Test(t *testing.T) {
-	tmpFileFh, err := ioutil.TempFile(os.TempDir(), "go-flock-")
+	tmpFileFh, err := os.CreateTemp(os.TempDir(), "go-flock-")
 	tmpFileFh.Close()
 	tmpFile := tmpFileFh.Name()
 	os.Remove(tmpFile)

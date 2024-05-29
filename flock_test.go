@@ -7,7 +7,6 @@ package flock_test
 
 import (
 	"context"
-	"io/ioutil"
 	"os"
 	"runtime"
 	"testing"
@@ -28,7 +27,7 @@ var _ = Suite(&TestSuite{})
 func Test(t *testing.T) { TestingT(t) }
 
 func (t *TestSuite) SetUpTest(c *C) {
-	tmpFile, err := ioutil.TempFile(os.TempDir(), "go-flock-")
+	tmpFile, err := os.CreateTemp(os.TempDir(), "go-flock-")
 	c.Assert(err, IsNil)
 	c.Assert(tmpFile, Not(IsNil))
 
@@ -46,9 +45,7 @@ func (t *TestSuite) TearDownTest(c *C) {
 }
 
 func (t *TestSuite) TestNew(c *C) {
-	var f *flock.Flock
-
-	f = flock.New(t.path)
+	f := flock.New(t.path)
 	c.Assert(f, Not(IsNil))
 	c.Check(f.Path(), Equals, t.path)
 	c.Check(f.Locked(), Equals, false)
@@ -56,26 +53,22 @@ func (t *TestSuite) TestNew(c *C) {
 }
 
 func (t *TestSuite) TestFlock_Path(c *C) {
-	var path string
-	path = t.flock.Path()
+	path := t.flock.Path()
 	c.Check(path, Equals, t.path)
 }
 
 func (t *TestSuite) TestFlock_Locked(c *C) {
-	var locked bool
-	locked = t.flock.Locked()
+	locked := t.flock.Locked()
 	c.Check(locked, Equals, false)
 }
 
 func (t *TestSuite) TestFlock_RLocked(c *C) {
-	var locked bool
-	locked = t.flock.RLocked()
+	locked := t.flock.RLocked()
 	c.Check(locked, Equals, false)
 }
 
 func (t *TestSuite) TestFlock_String(c *C) {
-	var str string
-	str = t.flock.String()
+	str := t.flock.String()
 	c.Assert(str, Equals, t.path)
 }
 
