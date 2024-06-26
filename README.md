@@ -42,7 +42,4 @@ For more detailed usage information take a look at the package API docs on
 
 ## Project History
 
-(originally github.com/theckman/go-flock)
-
 This project was originally `github.com/theckman/go-flock`, it was transferred to Gofrs by the original author [Tim Heckman ](https://github.com/theckman).
-
