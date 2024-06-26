@@ -1,4 +1,4 @@
-name: PR only
+name: Linting
 
 on:
   push:
@@ -9,7 +9,7 @@ on:
 
 jobs:
 
-  pr:
+  golangci-lint:
     name: Linting
     strategy:
       matrix:
@@ -30,5 +30,4 @@ jobs:
       - name: golangci-lint
         uses: golangci/golangci-lint-action@v6
         with:
-          args: --timeout=10m
           version: ${{ env.GOLANGCI_LINT_VERSION }}

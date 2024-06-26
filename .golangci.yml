@@ -1,0 +1,26 @@
+run:
+  timeout: 10m
+
+linters-settings:
+  misspell:
+    locale: US
+  godox:
+    keywords:
+      - FIXME
+
+linters:
+  enable:
+    - misspell
+    - godot
+
+issues:
+  exclude-use-default: true
+  max-issues-per-linter: 0
+  max-same-issues: 0
+
+output:
+  show-stats: true
+  sort-results: true
+  sort-order:
+    - linter
+    - file

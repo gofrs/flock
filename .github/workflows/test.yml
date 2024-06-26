@@ -1,4 +1,4 @@
-name: Go Matrix
+name: Run tests
 
 on:
   push:
