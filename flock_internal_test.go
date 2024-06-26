@@ -6,7 +6,7 @@ import (
 )
 
 func Test(t *testing.T) {
-	tmpFileFh, err := os.CreateTemp(os.TempDir(), "go-flock-")
+	tmpFileFh, _ := os.CreateTemp(os.TempDir(), "go-flock-")
 	tmpFileFh.Close()
 	tmpFile := tmpFileFh.Name()
 	os.Remove(tmpFile)

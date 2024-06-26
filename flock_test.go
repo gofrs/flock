@@ -40,7 +40,7 @@ func (t *TestSuite) SetUpTest(c *C) {
 }
 
 func (t *TestSuite) TearDownTest(c *C) {
-	t.flock.Unlock()
+	_ = t.flock.Unlock()
 	os.Remove(t.path)
 }
 
@@ -130,9 +130,9 @@ func (t *TestSuite) TestFlock_TryRLock(c *C) {
 
 	// make sure we just return false with no error in cases
 	// where we would have been blocked
-	t.flock.Unlock()
-	flock2.Unlock()
-	t.flock.Lock()
+	_ = t.flock.Unlock()
+	_ = flock2.Unlock()
+	_ = t.flock.Lock()
 	locked, err = flock.New(t.path).TryRLock()
 	c.Assert(err, IsNil)
 	c.Check(locked, Equals, false)
@@ -173,8 +173,8 @@ func (t *TestSuite) TestFlock_TryRLockContext(c *C) {
 	c.Check(locked, Equals, false)
 
 	// timeout
-	t.flock.Unlock()
-	t.flock.Lock()
+	_ = t.flock.Unlock()
+	_ = t.flock.Lock()
 	ctx, cancel = context.WithTimeout(context.Background(), 10*time.Millisecond)
 	defer cancel()
 	locked, err = flock.New(t.path).TryRLockContext(ctx, time.Second)
@@ -224,7 +224,7 @@ func (t *TestSuite) TestFlock_Lock(c *C) {
 	//
 	ch := make(chan error, 2)
 	gf := flock.New(t.path)
-	defer gf.Unlock()
+	defer func() { _ = gf.Unlock() }()
 
 	go func(ch chan<- error) {
 		ch <- nil
@@ -268,7 +268,7 @@ func (t *TestSuite) TestFlock_RLock(c *C) {
 	//
 	ch := make(chan error, 2)
 	gf := flock.New(t.path)
-	defer gf.Unlock()
+	defer func() { _ = gf.Unlock() }()
 
 	go func(ch chan<- error) {
 		ch <- nil
