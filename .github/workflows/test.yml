@@ -1,4 +1,4 @@
-name: Run tests
+name: Tests and Build
 
 on:
   push:
@@ -9,8 +9,8 @@ on:
 
 jobs:
 
-  cross:
-    name: Go
+  tests:
+    name: Tests
     strategy:
       matrix:
         go-version: [ stable, oldstable ]
@@ -33,3 +33,14 @@ jobs:
 
       - name: Test
         run: go test -v -race ./...
+
+  build:
+    name: Build
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-go@v5
+        with:
+          go-version: stable
+      - name: compile for all supported GOOS/GOARCH
+        run: ./build.sh
