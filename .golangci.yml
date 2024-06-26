@@ -17,6 +17,11 @@ issues:
   exclude-use-default: true
   max-issues-per-linter: 0
   max-same-issues: 0
+  exclude-rules:
+    - path: flock_winapi.go # Should be fixed in the future
+      text: 'SA1019: syscall.Syscall6 has been deprecated since Go 1.18: Use SyscallN instead.'
+      linters:
+        - staticcheck
 
 output:
   show-stats: true
