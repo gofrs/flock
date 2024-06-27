@@ -13,217 +13,219 @@ import (
 	"time"
 
 	"github.com/gofrs/flock"
-
-	. "gopkg.in/check.v1"
+	"github.com/stretchr/testify/suite"
 )
 
 type TestSuite struct {
+	suite.Suite
+
 	path  string
 	flock *flock.Flock
 }
 
-var _ = Suite(&TestSuite{})
+func Test(t *testing.T) { suite.Run(t, &TestSuite{}) }
 
-func Test(t *testing.T) { TestingT(t) }
-
-func (t *TestSuite) SetUpTest(c *C) {
+func (s *TestSuite) SetupTest() {
 	tmpFile, err := os.CreateTemp(os.TempDir(), "go-flock-")
-	c.Assert(err, IsNil)
-	c.Assert(tmpFile, Not(IsNil))
+	s.Require().NoError(err)
 
-	t.path = tmpFile.Name()
+	s.Require().NotNil(tmpFile)
 
-	defer os.Remove(t.path)
+	s.path = tmpFile.Name()
+
+	defer os.Remove(s.path)
 	tmpFile.Close()
 
-	t.flock = flock.New(t.path)
+	s.flock = flock.New(s.path)
 }
 
-func (t *TestSuite) TearDownTest(c *C) {
-	_ = t.flock.Unlock()
-	os.Remove(t.path)
+func (s *TestSuite) TearDownTest() {
+	_ = s.flock.Unlock()
+	os.Remove(s.path)
 }
 
-func (t *TestSuite) TestNew(c *C) {
-	f := flock.New(t.path)
-	c.Assert(f, Not(IsNil))
-	c.Check(f.Path(), Equals, t.path)
-	c.Check(f.Locked(), Equals, false)
-	c.Check(f.RLocked(), Equals, false)
+func (s *TestSuite) TestNew() {
+	f := flock.New(s.path)
+	s.Require().NotNil(f)
+
+	s.Assert().Equal(s.path, f.Path())
+	s.Assert().False(f.Locked())
+	s.Assert().False(f.RLocked())
 }
 
-func (t *TestSuite) TestFlock_Path(c *C) {
-	path := t.flock.Path()
-	c.Check(path, Equals, t.path)
+func (s *TestSuite) TestFlock_Path() {
+	path := s.flock.Path()
+	s.Assert().Equal(s.path, path)
 }
 
-func (t *TestSuite) TestFlock_Locked(c *C) {
-	locked := t.flock.Locked()
-	c.Check(locked, Equals, false)
+func (s *TestSuite) TestFlock_Locked() {
+	locked := s.flock.Locked()
+	s.Assert().False(locked)
 }
 
-func (t *TestSuite) TestFlock_RLocked(c *C) {
-	locked := t.flock.RLocked()
-	c.Check(locked, Equals, false)
+func (s *TestSuite) TestFlock_RLocked() {
+	locked := s.flock.RLocked()
+	s.Assert().False(locked)
 }
 
-func (t *TestSuite) TestFlock_String(c *C) {
-	str := t.flock.String()
-	c.Assert(str, Equals, t.path)
+func (s *TestSuite) TestFlock_String() {
+	str := s.flock.String()
+	s.Assert().Equal(s.path, str)
 }
 
-func (t *TestSuite) TestFlock_TryLock(c *C) {
-	c.Assert(t.flock.Locked(), Equals, false)
-	c.Assert(t.flock.RLocked(), Equals, false)
+func (s *TestSuite) TestFlock_TryLock() {
+	s.Assert().False(s.flock.Locked())
+	s.Assert().False(s.flock.RLocked())
 
 	var locked bool
 	var err error
 
-	locked, err = t.flock.TryLock()
-	c.Assert(err, IsNil)
-	c.Check(locked, Equals, true)
-	c.Check(t.flock.Locked(), Equals, true)
-	c.Check(t.flock.RLocked(), Equals, false)
+	locked, err = s.flock.TryLock()
+	s.Require().NoError(err)
+	s.Assert().True(locked)
+	s.Assert().True(s.flock.Locked())
+	s.Assert().False(s.flock.RLocked())
 
-	locked, err = t.flock.TryLock()
-	c.Assert(err, IsNil)
-	c.Check(locked, Equals, true)
+	locked, err = s.flock.TryLock()
+	s.Require().NoError(err)
+	s.Assert().True(locked)
 
 	// make sure we just return false with no error in cases
 	// where we would have been blocked
-	locked, err = flock.New(t.path).TryLock()
-	c.Assert(err, IsNil)
-	c.Check(locked, Equals, false)
+	locked, err = flock.New(s.path).TryLock()
+	s.Require().NoError(err)
+	s.Assert().False(locked)
 }
 
-func (t *TestSuite) TestFlock_TryRLock(c *C) {
-	c.Assert(t.flock.Locked(), Equals, false)
-	c.Assert(t.flock.RLocked(), Equals, false)
+func (s *TestSuite) TestFlock_TryRLock() {
+	s.Assert().False(s.flock.Locked())
+	s.Assert().False(s.flock.RLocked())
 
 	var locked bool
 	var err error
 
-	locked, err = t.flock.TryRLock()
-	c.Assert(err, IsNil)
-	c.Check(locked, Equals, true)
-	c.Check(t.flock.Locked(), Equals, false)
-	c.Check(t.flock.RLocked(), Equals, true)
+	locked, err = s.flock.TryRLock()
+	s.Require().NoError(err)
+	s.Assert().True(locked)
+	s.Assert().False(s.flock.Locked())
+	s.Assert().True(s.flock.RLocked())
 
-	locked, err = t.flock.TryRLock()
-	c.Assert(err, IsNil)
-	c.Check(locked, Equals, true)
+	locked, err = s.flock.TryRLock()
+	s.Require().NoError(err)
+	s.Assert().True(locked)
 
 	// shared lock should not block.
-	flock2 := flock.New(t.path)
+	flock2 := flock.New(s.path)
 	locked, err = flock2.TryRLock()
-	c.Assert(err, IsNil)
+	s.Require().NoError(err)
+
 	if runtime.GOOS == "aix" {
 		// When using POSIX locks, we can't safely read-lock the same
 		// inode through two different descriptors at the same time:
 		// when the first descriptor is closed, the second descriptor
 		// would still be open but silently unlocked. So a second
 		// TryRLock must return false.
-		c.Check(locked, Equals, false)
+		s.Assert().False(locked)
 	} else {
-		c.Check(locked, Equals, true)
+		s.Assert().True(locked)
 	}
 
 	// make sure we just return false with no error in cases
 	// where we would have been blocked
-	_ = t.flock.Unlock()
+	_ = s.flock.Unlock()
 	_ = flock2.Unlock()
-	_ = t.flock.Lock()
-	locked, err = flock.New(t.path).TryRLock()
-	c.Assert(err, IsNil)
-	c.Check(locked, Equals, false)
+	_ = s.flock.Lock()
+	locked, err = flock.New(s.path).TryRLock()
+	s.Require().NoError(err)
+	s.Assert().False(locked)
 }
 
-func (t *TestSuite) TestFlock_TryLockContext(c *C) {
+func (s *TestSuite) TestFlock_TryLockContext() {
 	// happy path
 	ctx, cancel := context.WithCancel(context.Background())
-	locked, err := t.flock.TryLockContext(ctx, time.Second)
-	c.Assert(err, IsNil)
-	c.Check(locked, Equals, true)
+	locked, err := s.flock.TryLockContext(ctx, time.Second)
+	s.Require().NoError(err)
+	s.Assert().True(locked)
 
 	// context already canceled
 	cancel()
-	locked, err = flock.New(t.path).TryLockContext(ctx, time.Second)
-	c.Assert(err, Equals, context.Canceled)
-	c.Check(locked, Equals, false)
+	locked, err = flock.New(s.path).TryLockContext(ctx, time.Second)
+	s.Assert().ErrorIs(err, context.Canceled)
+	s.Assert().False(locked)
 
 	// timeout
 	ctx, cancel = context.WithTimeout(context.Background(), 10*time.Millisecond)
 	defer cancel()
-	locked, err = flock.New(t.path).TryLockContext(ctx, time.Second)
-	c.Assert(err, Equals, context.DeadlineExceeded)
-	c.Check(locked, Equals, false)
+	locked, err = flock.New(s.path).TryLockContext(ctx, time.Second)
+	s.Assert().ErrorIs(err, context.DeadlineExceeded)
+	s.Assert().False(locked)
 }
 
-func (t *TestSuite) TestFlock_TryRLockContext(c *C) {
+func (s *TestSuite) TestFlock_TryRLockContext() {
 	// happy path
 	ctx, cancel := context.WithCancel(context.Background())
-	locked, err := t.flock.TryRLockContext(ctx, time.Second)
-	c.Assert(err, IsNil)
-	c.Check(locked, Equals, true)
+	locked, err := s.flock.TryRLockContext(ctx, time.Second)
+	s.Require().NoError(err)
+	s.Assert().True(locked)
 
 	// context already canceled
 	cancel()
-	locked, err = flock.New(t.path).TryRLockContext(ctx, time.Second)
-	c.Assert(err, Equals, context.Canceled)
-	c.Check(locked, Equals, false)
+	locked, err = flock.New(s.path).TryRLockContext(ctx, time.Second)
+	s.Assert().ErrorIs(err, context.Canceled)
+	s.Assert().False(locked)
 
 	// timeout
-	_ = t.flock.Unlock()
-	_ = t.flock.Lock()
+	_ = s.flock.Unlock()
+	_ = s.flock.Lock()
 	ctx, cancel = context.WithTimeout(context.Background(), 10*time.Millisecond)
 	defer cancel()
-	locked, err = flock.New(t.path).TryRLockContext(ctx, time.Second)
-	c.Assert(err, Equals, context.DeadlineExceeded)
-	c.Check(locked, Equals, false)
+	locked, err = flock.New(s.path).TryRLockContext(ctx, time.Second)
+	s.Assert().ErrorIs(err, context.DeadlineExceeded)
+	s.Assert().False(locked)
 }
 
-func (t *TestSuite) TestFlock_Unlock(c *C) {
+func (s *TestSuite) TestFlock_Unlock() {
 	var err error
 
-	err = t.flock.Unlock()
-	c.Assert(err, IsNil)
+	err = s.flock.Unlock()
+	s.Require().NoError(err)
 
 	// get a lock for us to unlock
-	locked, err := t.flock.TryLock()
-	c.Assert(err, IsNil)
-	c.Assert(locked, Equals, true)
-	c.Assert(t.flock.Locked(), Equals, true)
-	c.Check(t.flock.RLocked(), Equals, false)
+	locked, err := s.flock.TryLock()
+	s.Require().NoError(err)
+	s.Assert().True(locked)
+	s.Assert().True(s.flock.Locked())
+	s.Assert().False(s.flock.RLocked())
 
-	_, err = os.Stat(t.path)
-	c.Assert(os.IsNotExist(err), Equals, false)
+	_, err = os.Stat(s.path)
+	s.Assert().False(os.IsNotExist(err))
 
-	err = t.flock.Unlock()
-	c.Assert(err, IsNil)
-	c.Check(t.flock.Locked(), Equals, false)
-	c.Check(t.flock.RLocked(), Equals, false)
+	err = s.flock.Unlock()
+	s.Require().NoError(err)
+	s.Assert().False(s.flock.Locked())
+	s.Assert().False(s.flock.RLocked())
 }
 
-func (t *TestSuite) TestFlock_Lock(c *C) {
-	c.Assert(t.flock.Locked(), Equals, false)
-	c.Check(t.flock.RLocked(), Equals, false)
+func (s *TestSuite) TestFlock_Lock() {
+	s.Assert().False(s.flock.Locked())
+	s.Assert().False(s.flock.RLocked())
 
 	var err error
 
-	err = t.flock.Lock()
-	c.Assert(err, IsNil)
-	c.Check(t.flock.Locked(), Equals, true)
-	c.Check(t.flock.RLocked(), Equals, false)
+	err = s.flock.Lock()
+	s.Require().NoError(err)
+	s.Assert().True(s.flock.Locked())
+	s.Assert().False(s.flock.RLocked())
 
 	// test that the short-circuit works
-	err = t.flock.Lock()
-	c.Assert(err, IsNil)
+	err = s.flock.Lock()
+	s.Require().NoError(err)
 
 	//
 	// Test that Lock() is a blocking call
 	//
 	ch := make(chan error, 2)
-	gf := flock.New(t.path)
+	gf := flock.New(s.path)
 	defer func() { _ = gf.Unlock() }()
 
 	go func(ch chan<- error) {
@@ -233,41 +235,41 @@ func (t *TestSuite) TestFlock_Lock(c *C) {
 	}(ch)
 
 	errCh, ok := <-ch
-	c.Assert(ok, Equals, true)
-	c.Assert(errCh, IsNil)
+	s.Assert().True(ok)
+	s.Require().NoError(errCh)
 
-	err = t.flock.Unlock()
-	c.Assert(err, IsNil)
+	err = s.flock.Unlock()
+	s.Require().NoError(err)
 
 	errCh, ok = <-ch
-	c.Assert(ok, Equals, true)
-	c.Assert(errCh, IsNil)
-	c.Check(t.flock.Locked(), Equals, false)
-	c.Check(t.flock.RLocked(), Equals, false)
-	c.Check(gf.Locked(), Equals, true)
-	c.Check(gf.RLocked(), Equals, false)
+	s.Assert().True(ok)
+	s.Require().NoError(errCh)
+	s.Assert().False(s.flock.Locked())
+	s.Assert().False(s.flock.RLocked())
+	s.Assert().True(gf.Locked())
+	s.Assert().False(gf.RLocked())
 }
 
-func (t *TestSuite) TestFlock_RLock(c *C) {
-	c.Assert(t.flock.Locked(), Equals, false)
-	c.Check(t.flock.RLocked(), Equals, false)
+func (s *TestSuite) TestFlock_RLock() {
+	s.Assert().False(s.flock.Locked())
+	s.Assert().False(s.flock.RLocked())
 
 	var err error
 
-	err = t.flock.RLock()
-	c.Assert(err, IsNil)
-	c.Check(t.flock.Locked(), Equals, false)
-	c.Check(t.flock.RLocked(), Equals, true)
+	err = s.flock.RLock()
+	s.Require().NoError(err)
+	s.Assert().False(s.flock.Locked())
+	s.Assert().True(s.flock.RLocked())
 
 	// test that the short-circuit works
-	err = t.flock.RLock()
-	c.Assert(err, IsNil)
+	err = s.flock.RLock()
+	s.Require().NoError(err)
 
 	//
 	// Test that RLock() is a blocking call
 	//
 	ch := make(chan error, 2)
-	gf := flock.New(t.path)
+	gf := flock.New(s.path)
 	defer func() { _ = gf.Unlock() }()
 
 	go func(ch chan<- error) {
@@ -277,17 +279,17 @@ func (t *TestSuite) TestFlock_RLock(c *C) {
 	}(ch)
 
 	errCh, ok := <-ch
-	c.Assert(ok, Equals, true)
-	c.Assert(errCh, IsNil)
+	s.Assert().True(ok)
+	s.Require().NoError(errCh)
 
-	err = t.flock.Unlock()
-	c.Assert(err, IsNil)
+	err = s.flock.Unlock()
+	s.Require().NoError(err)
 
 	errCh, ok = <-ch
-	c.Assert(ok, Equals, true)
-	c.Assert(errCh, IsNil)
-	c.Check(t.flock.Locked(), Equals, false)
-	c.Check(t.flock.RLocked(), Equals, false)
-	c.Check(gf.Locked(), Equals, false)
-	c.Check(gf.RLocked(), Equals, true)
+	s.Assert().True(ok)
+	s.Require().NoError(errCh)
+	s.Assert().False(s.flock.Locked())
+	s.Assert().False(s.flock.RLocked())
+	s.Assert().False(gf.Locked())
+	s.Assert().True(gf.RLocked())
 }
