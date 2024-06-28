@@ -2,21 +2,20 @@
 
 ## Supported Versions
 
-We support the latest version of this library. We do not guarantee support of previous versions. If a defect is reported, it will generally be fixed on the latest version 
-(provided it exists) irrespective of whether it was introduced in a prior version.
+We support the latest version of this library.
+We do not guarantee support of previous versions.
+
+If a defect is reported, it will generally be fixed on the latest version (provided it exists) irrespective of whether it was introduced in a prior version.
 
 ## Reporting a Vulnerability
 
-If you discover a vulnerability against this package, please report it in the issues tab with a `vulnerability` label. We will examine promptly.
+To report a potential security vulnerability, please create a [security advisory](https://github.com/gofrs/flock/security/advisories/new).
 
-If you would like to disclose the vulnerability privately, you may reach the maintainers in our [channel](https://gophers.slack.com/archives/CBP4N9BEU) on the gophers slack.
+For us to respond to your report most effectively, please include any of the following:
+
+- Steps to reproduce or a proof-of-concept
+- Any relevant information, including the versions used
 
 ## Security Scorecard
 
-This project submits security [results](https://scorecard.dev/viewer/?uri=github.com/gofrs/flock) to the [OpenSSF Scorecard](https://securityscorecards.dev/). 
-
-### Actively Maintained
-
-One heuristic these scorecards measure to gauge whether a package is safe for consumption is an "Actively Maintained" metric. Because this library implements UUIDs,
-it is very stable - there is not much maintenance required other than adding/updating newer UUID versions, keeping up to date with latest versions of Go, and responding
-to reported exploits. As a result, periods of low active maintenance are to be expected. 
+This project submits security [results](https://scorecard.dev/viewer/?uri=github.com/gofrs/flock) to the [OpenSSF Scorecard](https://securityscorecards.dev/).
