@@ -7,57 +7,10 @@ body:
     attributes:
       label: Welcome
       options:
-        - label: Yes, I'm using the latest releases.
+        - label: Yes, I'm using the latest release.
           required: true
         - label: Yes, I've searched similar issues on GitHub and didn't find any.
           required: true
-        - label: Yes, I've included all information below (version, config, etc).
-          required: true
-
-  - type: dropdown
-    id: goos
-    attributes:
-      label: OS?
-      options:
-        - aix
-        - android
-        - darwin
-        - dragonfly
-        - freebsd
-        - illumos
-        - ios
-        - js
-        - linux
-        - netbsd
-        - openbsd
-        - plan9
-        - solaris
-        - wasip1
-        - windows
-    validations:
-      required: true
-
-  - type: dropdown
-    id: goarch
-    attributes:
-      label: Arch?
-      options:
-        - 'ppc64'
-        - '386'
-        - 'amd64'
-        - 'arm'
-        - 'arm64'
-        - 'riscv64'
-        - 'wasm'
-        - 'loong64'
-        - 'mips'
-        - 'mips64'
-        - 'mips64le'
-        - 'mipsle'
-        - 'ppc64le'
-        - s390x
-    validations:
-      required: true
 
   - type: textarea
     id: expected
@@ -114,7 +67,7 @@ body:
   - type: textarea
     id: go-env
     attributes:
-      label: Go environment (if applicable)
+      label: Go environment
       value: |-
         <details>
 
@@ -125,4 +78,12 @@ body:
 
         </details>
     validations:
-      required: false
+      required: true
+
+  - type: checkboxes
+    id: validation
+    attributes:
+      label: Validation
+      options:
+        - label: Yes, I've included all information above (version, config, etc.).
+          required: true
