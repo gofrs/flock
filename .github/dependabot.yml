@@ -5,6 +5,10 @@ version: 2
 updates:
   - package-ecosystem: gomod
     directory: "/"
+    groups:
+      all:
+        patterns:
+          - "*"  # Group all updates into a single larger pull request.
     schedule:
       interval: weekly
       day: sunday
@@ -12,6 +16,10 @@ updates:
 
   - package-ecosystem: github-actions
     directory: /
+    groups:
+      all:
+        patterns:
+          - "*"  # Group all updates into a single larger pull request.
     schedule:
       interval: weekly
       day: sunday
