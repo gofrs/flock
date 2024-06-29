@@ -153,7 +153,6 @@ func (f *Flock) doLock(cmd cmdType, lt lockType, blocking bool) (bool, error) {
 	}
 
 	err = setlkw(f.fh.Fd(), cmd, lt)
-
 	if err != nil {
 		f.doUnlock()
 		if cmd == tryLock && err == unix.EACCES {

@@ -126,7 +126,8 @@ func (f *Flock) setFh() error {
 	} else {
 		flags |= os.O_RDONLY
 	}
-	fh, err := os.OpenFile(f.path, flags, os.FileMode(0600))
+
+	fh, err := os.OpenFile(f.path, flags, os.FileMode(0o600))
 	if err != nil {
 		return err
 	}

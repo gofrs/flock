@@ -2,6 +2,7 @@
 // Copyright 2018-2024 The Gofrs. All rights reserved.
 // Use of this source code is governed by the BSD 3-Clause
 // license that can be found in the LICENSE file.
+
 package flock_test
 
 import (
@@ -47,71 +48,71 @@ func (s *TestSuite) TestNew() {
 	f := flock.New(s.path)
 	s.Require().NotNil(f)
 
-	s.Assert().Equal(s.path, f.Path())
-	s.Assert().False(f.Locked())
-	s.Assert().False(f.RLocked())
+	s.Equal(s.path, f.Path())
+	s.False(f.Locked())
+	s.False(f.RLocked())
 }
 
 func (s *TestSuite) TestFlock_Path() {
 	path := s.flock.Path()
-	s.Assert().Equal(s.path, path)
+	s.Equal(s.path, path)
 }
 
 func (s *TestSuite) TestFlock_Locked() {
 	locked := s.flock.Locked()
-	s.Assert().False(locked)
+	s.False(locked)
 }
 
 func (s *TestSuite) TestFlock_RLocked() {
 	locked := s.flock.RLocked()
-	s.Assert().False(locked)
+	s.False(locked)
 }
 
 func (s *TestSuite) TestFlock_String() {
 	str := s.flock.String()
-	s.Assert().Equal(s.path, str)
+	s.Equal(s.path, str)
 }
 
 func (s *TestSuite) TestFlock_TryLock() {
-	s.Assert().False(s.flock.Locked())
-	s.Assert().False(s.flock.RLocked())
+	s.False(s.flock.Locked())
+	s.False(s.flock.RLocked())
 
 	var locked bool
 	var err error
 
 	locked, err = s.flock.TryLock()
 	s.Require().NoError(err)
-	s.Assert().True(locked)
-	s.Assert().True(s.flock.Locked())
-	s.Assert().False(s.flock.RLocked())
+	s.True(locked)
+	s.True(s.flock.Locked())
+	s.False(s.flock.RLocked())
 
 	locked, err = s.flock.TryLock()
 	s.Require().NoError(err)
-	s.Assert().True(locked)
+	s.True(locked)
 
 	// make sure we just return false with no error in cases
 	// where we would have been blocked
 	locked, err = flock.New(s.path).TryLock()
 	s.Require().NoError(err)
-	s.Assert().False(locked)
+	s.False(locked)
 }
 
 func (s *TestSuite) TestFlock_TryRLock() {
-	s.Assert().False(s.flock.Locked())
-	s.Assert().False(s.flock.RLocked())
+	s.False(s.flock.Locked())
+	s.False(s.flock.RLocked())
 
 	var locked bool
 	var err error
 
 	locked, err = s.flock.TryRLock()
 	s.Require().NoError(err)
-	s.Assert().True(locked)
-	s.Assert().False(s.flock.Locked())
-	s.Assert().True(s.flock.RLocked())
+	s.True(locked)
+	s.False(s.flock.Locked())
+	s.True(s.flock.RLocked())
 
 	locked, err = s.flock.TryRLock()
 	s.Require().NoError(err)
-	s.Assert().True(locked)
+	s.True(locked)
 
 	// shared lock should not block.
 	flock2 := flock.New(s.path)
@@ -124,9 +125,9 @@ func (s *TestSuite) TestFlock_TryRLock() {
 		// when the first descriptor is closed, the second descriptor
 		// would still be open but silently unlocked. So a second
 		// TryRLock must return false.
-		s.Assert().False(locked)
+		s.False(locked)
 	} else {
-		s.Assert().True(locked)
+		s.True(locked)
 	}
 
 	// make sure we just return false with no error in cases
@@ -136,7 +137,7 @@ func (s *TestSuite) TestFlock_TryRLock() {
 	_ = s.flock.Lock()
 	locked, err = flock.New(s.path).TryRLock()
 	s.Require().NoError(err)
-	s.Assert().False(locked)
+	s.False(locked)
 }
 
 func (s *TestSuite) TestFlock_TryLockContext() {
@@ -144,20 +145,22 @@ func (s *TestSuite) TestFlock_TryLockContext() {
 	ctx, cancel := context.WithCancel(context.Background())
 	locked, err := s.flock.TryLockContext(ctx, time.Second)
 	s.Require().NoError(err)
-	s.Assert().True(locked)
+	s.True(locked)
 
 	// context already canceled
 	cancel()
+
 	locked, err = flock.New(s.path).TryLockContext(ctx, time.Second)
-	s.Assert().ErrorIs(err, context.Canceled)
-	s.Assert().False(locked)
+	s.Require().ErrorIs(err, context.Canceled)
+	s.False(locked)
 
 	// timeout
 	ctx, cancel = context.WithTimeout(context.Background(), 10*time.Millisecond)
 	defer cancel()
+
 	locked, err = flock.New(s.path).TryLockContext(ctx, time.Second)
-	s.Assert().ErrorIs(err, context.DeadlineExceeded)
-	s.Assert().False(locked)
+	s.Require().ErrorIs(err, context.DeadlineExceeded)
+	s.False(locked)
 }
 
 func (s *TestSuite) TestFlock_TryRLockContext() {
@@ -165,22 +168,24 @@ func (s *TestSuite) TestFlock_TryRLockContext() {
 	ctx, cancel := context.WithCancel(context.Background())
 	locked, err := s.flock.TryRLockContext(ctx, time.Second)
 	s.Require().NoError(err)
-	s.Assert().True(locked)
+	s.True(locked)
 
 	// context already canceled
 	cancel()
 	locked, err = flock.New(s.path).TryRLockContext(ctx, time.Second)
-	s.Assert().ErrorIs(err, context.Canceled)
-	s.Assert().False(locked)
+	s.Require().ErrorIs(err, context.Canceled)
+	s.False(locked)
 
 	// timeout
 	_ = s.flock.Unlock()
 	_ = s.flock.Lock()
+
 	ctx, cancel = context.WithTimeout(context.Background(), 10*time.Millisecond)
 	defer cancel()
+
 	locked, err = flock.New(s.path).TryRLockContext(ctx, time.Second)
-	s.Assert().ErrorIs(err, context.DeadlineExceeded)
-	s.Assert().False(locked)
+	s.Require().ErrorIs(err, context.DeadlineExceeded)
+	s.False(locked)
 }
 
 func (s *TestSuite) TestFlock_Unlock() {
@@ -192,29 +197,29 @@ func (s *TestSuite) TestFlock_Unlock() {
 	// get a lock for us to unlock
 	locked, err := s.flock.TryLock()
 	s.Require().NoError(err)
-	s.Assert().True(locked)
-	s.Assert().True(s.flock.Locked())
-	s.Assert().False(s.flock.RLocked())
+	s.True(locked)
+	s.True(s.flock.Locked())
+	s.False(s.flock.RLocked())
 
 	_, err = os.Stat(s.path)
-	s.Assert().False(os.IsNotExist(err))
+	s.False(os.IsNotExist(err))
 
 	err = s.flock.Unlock()
 	s.Require().NoError(err)
-	s.Assert().False(s.flock.Locked())
-	s.Assert().False(s.flock.RLocked())
+	s.False(s.flock.Locked())
+	s.False(s.flock.RLocked())
 }
 
 func (s *TestSuite) TestFlock_Lock() {
-	s.Assert().False(s.flock.Locked())
-	s.Assert().False(s.flock.RLocked())
+	s.False(s.flock.Locked())
+	s.False(s.flock.RLocked())
 
 	var err error
 
 	err = s.flock.Lock()
 	s.Require().NoError(err)
-	s.Assert().True(s.flock.Locked())
-	s.Assert().False(s.flock.RLocked())
+	s.True(s.flock.Locked())
+	s.False(s.flock.RLocked())
 
 	// test that the short-circuit works
 	err = s.flock.Lock()
@@ -234,31 +239,31 @@ func (s *TestSuite) TestFlock_Lock() {
 	}(ch)
 
 	errCh, ok := <-ch
-	s.Assert().True(ok)
+	s.True(ok)
 	s.Require().NoError(errCh)
 
 	err = s.flock.Unlock()
 	s.Require().NoError(err)
 
 	errCh, ok = <-ch
-	s.Assert().True(ok)
+	s.True(ok)
 	s.Require().NoError(errCh)
-	s.Assert().False(s.flock.Locked())
-	s.Assert().False(s.flock.RLocked())
-	s.Assert().True(gf.Locked())
-	s.Assert().False(gf.RLocked())
+	s.False(s.flock.Locked())
+	s.False(s.flock.RLocked())
+	s.True(gf.Locked())
+	s.False(gf.RLocked())
 }
 
 func (s *TestSuite) TestFlock_RLock() {
-	s.Assert().False(s.flock.Locked())
-	s.Assert().False(s.flock.RLocked())
+	s.False(s.flock.Locked())
+	s.False(s.flock.RLocked())
 
 	var err error
 
 	err = s.flock.RLock()
 	s.Require().NoError(err)
-	s.Assert().False(s.flock.Locked())
-	s.Assert().True(s.flock.RLocked())
+	s.False(s.flock.Locked())
+	s.True(s.flock.RLocked())
 
 	// test that the short-circuit works
 	err = s.flock.RLock()
@@ -278,17 +283,17 @@ func (s *TestSuite) TestFlock_RLock() {
 	}(ch)
 
 	errCh, ok := <-ch
-	s.Assert().True(ok)
+	s.True(ok)
 	s.Require().NoError(errCh)
 
 	err = s.flock.Unlock()
 	s.Require().NoError(err)
 
 	errCh, ok = <-ch
-	s.Assert().True(ok)
+	s.True(ok)
 	s.Require().NoError(errCh)
-	s.Assert().False(s.flock.Locked())
-	s.Assert().False(s.flock.RLocked())
-	s.Assert().False(gf.Locked())
-	s.Assert().True(gf.RLocked())
+	s.False(s.flock.Locked())
+	s.False(s.flock.RLocked())
+	s.False(gf.Locked())
+	s.True(gf.RLocked())
 }
