@@ -20,6 +20,7 @@ func ExampleFlock_Locked() {
 	_, err := f.TryLock()
 	if err != nil {
 		// handle locking error
+		panic(err)
 	}
 
 	fmt.Printf("locked: %v\n", f.Locked())
@@ -27,6 +28,7 @@ func ExampleFlock_Locked() {
 	err = f.Unlock()
 	if err != nil {
 		// handle locking error
+		panic(err)
 	}
 
 	fmt.Printf("locked: %v\n", f.Locked())
@@ -41,6 +43,7 @@ func ExampleFlock_TryLock() {
 	locked, err := fileLock.TryLock()
 	if err != nil {
 		// handle locking error
+		panic(err)
 	}
 
 	if locked {
@@ -48,6 +51,7 @@ func ExampleFlock_TryLock() {
 
 		if err := fileLock.Unlock(); err != nil {
 			// handle unlock error
+			panic(err)
 		}
 	}
 
@@ -64,6 +68,7 @@ func ExampleFlock_TryLockContext() {
 	locked, err := fileLock.TryLockContext(lockCtx, 678*time.Millisecond)
 	if err != nil {
 		// handle locking error
+		panic(err)
 	}
 
 	if locked {
@@ -71,6 +76,7 @@ func ExampleFlock_TryLockContext() {
 
 		if err := fileLock.Unlock(); err != nil {
 			// handle unlock error
+			panic(err)
 		}
 	}
 
