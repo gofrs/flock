@@ -25,6 +25,22 @@ import (
 	"time"
 )
 
+type Option func(f *Flock)
+
+// SetFlag sets the flag used to create/open the file.
+func SetFlag(flag int) Option {
+	return func(f *Flock) {
+		f.flag = flag
+	}
+}
+
+// SetPermissions sets the OS permissions to set on the file.
+func SetPermissions(perm os.FileMode) Option {
+	return func(f *Flock) {
+		f.perm = perm
+	}
+}
+
 // Flock is the struct type to handle file locking. All fields are unexported,
 // with access to some of the fields provided by getter methods (Path() and Locked()).
 type Flock struct {
@@ -33,12 +49,37 @@ type Flock struct {
 	fh   *os.File
 	l    bool
 	r    bool
+
+	// flag is the flag used to create/open the file.
+	flag int
+	// perm is the OS permissions to set on the file.
+	perm os.FileMode
 }
 
 // New returns a new instance of *Flock. The only parameter
 // it takes is the path to the desired lockfile.
-func New(path string) *Flock {
-	return &Flock{path: path}
+func New(path string, opts ...Option) *Flock {
+	// create it if it doesn't exist, and open the file read-only.
+	flags := os.O_CREATE
+	switch runtime.GOOS {
+	case "aix", "solaris", "illumos":
+		// AIX cannot preform write-lock (i.e. exclusive) on a read-only file.
+		flags |= os.O_RDWR
+	default:
+		flags |= os.O_RDONLY
+	}
+
+	f := &Flock{
+		path: path,
+		flag: flags,
+		perm: os.FileMode(0o600),
+	}
+
+	for _, opt := range opts {
+		opt(f)
+	}
+
+	return f
 }
 
 // NewFlock returns a new instance of *Flock. The only parameter
@@ -117,23 +158,14 @@ func tryCtx(ctx context.Context, fn func() (bool, error), retryDelay time.Durati
 
 func (f *Flock) setFh() error {
 	// open a new os.File instance
-	// create it if it doesn't exist, and open the file read-only.
-	flags := os.O_CREATE
-	switch runtime.GOOS {
-	case "aix", "solaris", "illumos":
-		// AIX cannot preform write-lock (i.e. exclusive) on a read-only file.
-		flags |= os.O_RDWR
-	default:
-		flags |= os.O_RDONLY
-	}
-
-	fh, err := os.OpenFile(f.path, flags, os.FileMode(0o600))
+	fh, err := os.OpenFile(f.path, f.flag, f.perm)
 	if err != nil {
 		return err
 	}
 
-	// set the filehandle on the struct
+	// set the file handle on the struct
 	f.fh = fh
+
 	return nil
 }
 
