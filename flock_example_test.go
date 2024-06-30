@@ -9,13 +9,14 @@ import (
 	"context"
 	"fmt"
 	"os"
+	"path/filepath"
 	"time"
 
 	"github.com/gofrs/flock"
 )
 
 func ExampleFlock_Locked() {
-	f := flock.New(os.TempDir() + "/go-lock.lock")
+	f := flock.New(filepath.Join(os.TempDir(), "go-lock.lock"))
 
 	_, err := f.TryLock()
 	if err != nil {
@@ -32,53 +33,54 @@ func ExampleFlock_Locked() {
 	}
 
 	fmt.Printf("locked: %v\n", f.Locked())
+
 	// Output: locked: true
 	// locked: false
 }
 
 func ExampleFlock_TryLock() {
 	// should probably put these in /var/lock
-	fileLock := flock.New(os.TempDir() + "/go-lock.lock")
+	f := flock.New(filepath.Join(os.TempDir(), "go-lock.lock"))
 
-	locked, err := fileLock.TryLock()
+	locked, err := f.TryLock()
 	if err != nil {
 		// handle locking error
 		panic(err)
 	}
 
 	if locked {
-		fmt.Printf("path: %s; locked: %v\n", fileLock.Path(), fileLock.Locked())
+		fmt.Printf("path: %s; locked: %v\n", f.Path(), f.Locked())
 
-		if err := fileLock.Unlock(); err != nil {
+		if err := f.Unlock(); err != nil {
 			// handle unlock error
 			panic(err)
 		}
 	}
 
-	fmt.Printf("path: %s; locked: %v\n", fileLock.Path(), fileLock.Locked())
+	fmt.Printf("path: %s; locked: %v\n", f.Path(), f.Locked())
 }
 
 func ExampleFlock_TryLockContext() {
 	// should probably put these in /var/lock
-	fileLock := flock.New(os.TempDir() + "/go-lock.lock")
+	f := flock.New(filepath.Join(os.TempDir(), "go-lock.lock"))
 
 	lockCtx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
 	defer cancel()
 
-	locked, err := fileLock.TryLockContext(lockCtx, 678*time.Millisecond)
+	locked, err := f.TryLockContext(lockCtx, 678*time.Millisecond)
 	if err != nil {
 		// handle locking error
 		panic(err)
 	}
 
 	if locked {
-		fmt.Printf("path: %s; locked: %v\n", fileLock.Path(), fileLock.Locked())
+		fmt.Printf("path: %s; locked: %v\n", f.Path(), f.Locked())
 
-		if err := fileLock.Unlock(); err != nil {
+		if err := f.Unlock(); err != nil {
 			// handle unlock error
 			panic(err)
 		}
 	}
 
-	fmt.Printf("path: %s; locked: %v\n", fileLock.Path(), fileLock.Locked())
+	fmt.Printf("path: %s; locked: %v\n", f.Path(), f.Locked())
 }

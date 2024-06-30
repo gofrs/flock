@@ -47,6 +47,7 @@ func (f *Flock) lock(locked *bool, flag uint32) error {
 		if err := f.setFh(); err != nil {
 			return err
 		}
+
 		defer f.ensureFhState()
 	}
 
@@ -56,6 +57,7 @@ func (f *Flock) lock(locked *bool, flag uint32) error {
 	}
 
 	*locked = true
+
 	return nil
 }
 
@@ -126,6 +128,7 @@ func (f *Flock) try(locked *bool, flag uint32) (bool, error) {
 		if err := f.setFh(); err != nil {
 			return false, err
 		}
+
 		defer f.ensureFhState()
 	}
 

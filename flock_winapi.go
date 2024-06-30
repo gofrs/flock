@@ -43,15 +43,15 @@ func lockFileEx(handle syscall.Handle, flags, reserved, numberOfBytesToLockLow, 
 		uintptr(numberOfBytesToLockHigh),
 		uintptr(unsafe.Pointer(offset)))
 
-	if r1 != 1 {
-		if errNo == 0 {
-			return false, syscall.EINVAL
-		}
-
-		return false, errNo
+	if r1 == 1 {
+		return true, 0
 	}
 
-	return true, 0
+	if errNo == 0 {
+		return false, syscall.EINVAL
+	}
+
+	return false, errNo
 }
 
 func unlockFileEx(handle syscall.Handle, reserved, numberOfBytesToLockLow, numberOfBytesToLockHigh uint32, offset *syscall.Overlapped) (bool, syscall.Errno) {
@@ -63,13 +63,13 @@ func unlockFileEx(handle syscall.Handle, reserved, numberOfBytesToLockLow, numbe
 		uintptr(numberOfBytesToLockHigh),
 		uintptr(unsafe.Pointer(offset)))
 
-	if r1 != 1 {
-		if errNo == 0 {
-			return false, syscall.EINVAL
-		}
-
-		return false, errNo
+	if r1 == 1 {
+		return true, 0
 	}
 
-	return true, 0
+	if errNo == 0 {
+		return false, syscall.EINVAL
+	}
+
+	return false, errNo
 }

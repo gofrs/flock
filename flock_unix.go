@@ -53,6 +53,7 @@ func (f *Flock) lock(locked *bool, flag int) error {
 		if err := f.setFh(); err != nil {
 			return err
 		}
+
 		defer f.ensureFhState()
 	}
 
@@ -146,6 +147,7 @@ func (f *Flock) try(locked *bool, flag int) (bool, error) {
 		if err := f.setFh(); err != nil {
 			return false, err
 		}
+
 		defer f.ensureFhState()
 	}
 
@@ -182,22 +184,26 @@ func (f *Flock) reopenFDOnError(err error) (bool, error) {
 	if !errors.Is(err, syscall.EIO) && !errors.Is(err, syscall.EBADF) {
 		return false, nil
 	}
-	if st, err := f.fh.Stat(); err == nil {
-		// if the file is able to be read and written
-		if st.Mode()&f.perm == f.perm {
-			_ = f.fh.Close()
-			f.fh = nil
 
-			// reopen in read-write mode and set the file handle
-			fh, err := os.OpenFile(f.path, f.flag, f.perm)
-			if err != nil {
-				return false, err
-			}
-			f.fh = fh
-
-			return true, nil
-		}
+	st, err := f.fh.Stat()
+	if err != nil {
+		return false, nil
 	}
 
-	return false, nil
+	if st.Mode()&f.perm != f.perm {
+		return false, nil
+	}
+
+	_ = f.fh.Close()
+	f.fh = nil
+
+	// reopen in read-write mode and set the file handle
+	fh, err := os.OpenFile(f.path, f.flag, f.perm)
+	if err != nil {
+		return false, err
+	}
+
+	f.fh = fh
+
+	return true, nil
 }

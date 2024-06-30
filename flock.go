@@ -109,6 +109,7 @@ func (f *Flock) Path() string {
 func (f *Flock) Locked() bool {
 	f.m.RLock()
 	defer f.m.RUnlock()
+
 	return f.l
 }
 
@@ -118,6 +119,7 @@ func (f *Flock) Locked() bool {
 func (f *Flock) RLocked() bool {
 	f.m.RLock()
 	defer f.m.RUnlock()
+
 	return f.r
 }
 

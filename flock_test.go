@@ -32,55 +32,48 @@ func (s *TestSuite) SetupTest() {
 	s.Require().NotNil(tmpFile)
 
 	s.path = tmpFile.Name()
+	_ = tmpFile.Close()
 
 	defer os.Remove(s.path)
-	tmpFile.Close()
 
 	s.flock = flock.New(s.path)
 }
 
 func (s *TestSuite) TearDownTest() {
 	_ = s.flock.Unlock()
-	os.Remove(s.path)
+	_ = os.Remove(s.path)
 }
 
 func (s *TestSuite) TestNew() {
 	f := flock.New(s.path)
 	s.Require().NotNil(f)
 
-	s.Equal(s.path, f.Path())
+	s.Equal(f.Path(), s.path)
 	s.False(f.Locked())
 	s.False(f.RLocked())
 }
 
 func (s *TestSuite) TestFlock_Path() {
-	path := s.flock.Path()
-	s.Equal(s.path, path)
+	s.Equal(s.path, s.flock.Path())
 }
 
 func (s *TestSuite) TestFlock_Locked() {
-	locked := s.flock.Locked()
-	s.False(locked)
+	s.False(s.flock.Locked())
 }
 
 func (s *TestSuite) TestFlock_RLocked() {
-	locked := s.flock.RLocked()
-	s.False(locked)
+	s.False(s.flock.RLocked())
 }
 
 func (s *TestSuite) TestFlock_String() {
-	str := s.flock.String()
-	s.Equal(s.path, str)
+	s.Equal(s.path, s.flock.String())
 }
 
 func (s *TestSuite) TestFlock_TryLock() {
 	s.False(s.flock.Locked())
 	s.False(s.flock.RLocked())
 
-	var locked bool
-	var err error
-
-	locked, err = s.flock.TryLock()
+	locked, err := s.flock.TryLock()
 	s.Require().NoError(err)
 	s.True(locked)
 	s.True(s.flock.Locked())
@@ -101,10 +94,7 @@ func (s *TestSuite) TestFlock_TryRLock() {
 	s.False(s.flock.Locked())
 	s.False(s.flock.RLocked())
 
-	var locked bool
-	var err error
-
-	locked, err = s.flock.TryRLock()
+	locked, err := s.flock.TryRLock()
 	s.Require().NoError(err)
 	s.True(locked)
 	s.False(s.flock.Locked())
@@ -142,8 +132,9 @@ func (s *TestSuite) TestFlock_TryRLock() {
 }
 
 func (s *TestSuite) TestFlock_TryLockContext() {
-	// happy path
 	ctx, cancel := context.WithCancel(context.Background())
+
+	// happy path
 	locked, err := s.flock.TryLockContext(ctx, time.Second)
 	s.Require().NoError(err)
 	s.True(locked)
@@ -165,14 +156,16 @@ func (s *TestSuite) TestFlock_TryLockContext() {
 }
 
 func (s *TestSuite) TestFlock_TryRLockContext() {
-	// happy path
 	ctx, cancel := context.WithCancel(context.Background())
+
+	// happy path
 	locked, err := s.flock.TryRLockContext(ctx, time.Second)
 	s.Require().NoError(err)
 	s.True(locked)
 
 	// context already canceled
 	cancel()
+
 	locked, err = flock.New(s.path).TryRLockContext(ctx, time.Second)
 	s.Require().ErrorIs(err, context.Canceled)
 	s.False(locked)
@@ -190,9 +183,7 @@ func (s *TestSuite) TestFlock_TryRLockContext() {
 }
 
 func (s *TestSuite) TestFlock_Unlock() {
-	var err error
-
-	err = s.flock.Unlock()
+	err := s.flock.Unlock()
 	s.Require().NoError(err)
 
 	// get a lock for us to unlock
@@ -215,9 +206,7 @@ func (s *TestSuite) TestFlock_Lock() {
 	s.False(s.flock.Locked())
 	s.False(s.flock.RLocked())
 
-	var err error
-
-	err = s.flock.Lock()
+	err := s.flock.Lock()
 	s.Require().NoError(err)
 	s.True(s.flock.Locked())
 	s.False(s.flock.RLocked())
@@ -259,9 +248,7 @@ func (s *TestSuite) TestFlock_RLock() {
 	s.False(s.flock.Locked())
 	s.False(s.flock.RLocked())
 
-	var err error
-
-	err = s.flock.RLock()
+	err := s.flock.RLock()
 	s.Require().NoError(err)
 	s.False(s.flock.Locked())
 	s.True(s.flock.RLocked())

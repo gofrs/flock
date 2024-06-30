@@ -17,8 +17,8 @@ func Test(t *testing.T) {
 	tmpFile, err := os.CreateTemp(t.TempDir(), "go-flock-")
 	require.NoError(t, err)
 
-	tmpFile.Close()
-	os.Remove(tmpFile.Name())
+	_ = tmpFile.Close()
+	_ = os.Remove(tmpFile.Name())
 
 	lock := New(tmpFile.Name())
 
