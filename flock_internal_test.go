@@ -13,12 +13,15 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
-func Test(t *testing.T) {
+func TestFlock_fh_onError(t *testing.T) {
 	tmpFile, err := os.CreateTemp(t.TempDir(), "go-flock-")
 	require.NoError(t, err)
 
-	_ = tmpFile.Close()
-	_ = os.Remove(tmpFile.Name())
+	err = tmpFile.Close()
+	require.NoError(t, err)
+
+	err = os.Remove(tmpFile.Name())
+	require.NoError(t, err)
 
 	lock := New(tmpFile.Name())
 

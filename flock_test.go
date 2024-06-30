@@ -32,9 +32,12 @@ func (s *TestSuite) SetupTest() {
 	s.Require().NotNil(tmpFile)
 
 	s.path = tmpFile.Name()
-	_ = tmpFile.Close()
 
-	defer os.Remove(s.path)
+	err = tmpFile.Close()
+	s.Require().NoError(err)
+
+	err = os.Remove(s.path)
+	s.Require().NoError(err)
 
 	s.flock = flock.New(s.path)
 }
