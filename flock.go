@@ -119,11 +119,11 @@ func (f *Flock) setFh() error {
 	// open a new os.File instance
 	// create it if it doesn't exist, and open the file read-only.
 	flags := os.O_CREATE
-	if runtime.GOOS == "aix" || runtime.GOOS == "solaris" || runtime.GOOS == "illumos" {
-		// AIX cannot preform write-lock (ie exclusive) on a
-		// read-only file.
+	switch runtime.GOOS {
+	case "aix", "solaris", "illumos":
+		// AIX cannot preform write-lock (i.e. exclusive) on a read-only file.
 		flags |= os.O_RDWR
-	} else {
+	default:
 		flags |= os.O_RDONLY
 	}
 

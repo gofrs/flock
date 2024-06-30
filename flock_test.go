@@ -119,14 +119,15 @@ func (s *TestSuite) TestFlock_TryRLock() {
 	locked, err = flock2.TryRLock()
 	s.Require().NoError(err)
 
-	if runtime.GOOS == "aix" || runtime.GOOS == "solaris" || runtime.GOOS == "illumos" {
+	switch runtime.GOOS {
+	case "aix", "solaris", "illumos":
 		// When using POSIX locks, we can't safely read-lock the same
 		// inode through two different descriptors at the same time:
 		// when the first descriptor is closed, the second descriptor
 		// would still be open but silently unlocked. So a second
 		// TryRLock must return false.
 		s.False(locked)
-	} else {
+	default:
 		s.True(locked)
 	}
 
