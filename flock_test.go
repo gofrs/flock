@@ -26,7 +26,7 @@ type TestSuite struct {
 func Test(t *testing.T) { suite.Run(t, &TestSuite{}) }
 
 func (s *TestSuite) SetupTest() {
-	tmpFile, err := os.CreateTemp(os.TempDir(), "go-flock-")
+	tmpFile, err := os.CreateTemp(s.T().TempDir(), "go-flock-")
 	s.Require().NoError(err)
 
 	s.Require().NotNil(tmpFile)

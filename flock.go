@@ -171,8 +171,10 @@ func (f *Flock) setFh() error {
 
 // ensure the file handle is closed if no lock is held.
 func (f *Flock) ensureFhState() {
-	if !f.l && !f.r && f.fh != nil {
-		f.fh.Close()
-		f.fh = nil
+	if f.l || f.r || f.fh == nil {
+		return
 	}
+
+	f.fh.Close()
+	f.fh = nil
 }
