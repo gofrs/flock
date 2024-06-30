@@ -127,16 +127,18 @@ func (f *Flock) String() string {
 	return f.path
 }
 
-// TryLockContext repeatedly tries to take an exclusive lock until one of the
-// conditions is met: TryLock succeeds, TryLock fails with error, or Context
-// Done channel is closed.
+// TryLockContext repeatedly tries to take an exclusive lock until one of the conditions is met:
+// - TryLock succeeds
+// - TryLock fails with error
+// - Context Done channel is closed.
 func (f *Flock) TryLockContext(ctx context.Context, retryDelay time.Duration) (bool, error) {
 	return tryCtx(ctx, f.TryLock, retryDelay)
 }
 
-// TryRLockContext repeatedly tries to take a shared lock until one of the
-// conditions is met: TryRLock succeeds, TryRLock fails with error, or Context
-// Done channel is closed.
+// TryRLockContext repeatedly tries to take a shared lock until one of the conditions is met:
+// - TryRLock succeeds
+// - TryRLock fails with error
+// - Context Done channel is closed.
 func (f *Flock) TryRLockContext(ctx context.Context, retryDelay time.Duration) (bool, error) {
 	return tryCtx(ctx, f.TryRLock, retryDelay)
 }

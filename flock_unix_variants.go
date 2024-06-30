@@ -7,9 +7,9 @@
 // Use of this source code is governed by a BSD-style
 // license that can be found in the LICENSE file.
 
-// This code implements the filelock API using POSIX 'fcntl' locks, which attach
-// to an (inode, process) pair rather than a file descriptor. To avoid unlocking
-// files prematurely when the same file is opened through different descriptors,
+// This code implements the filelock API using POSIX 'fcntl' locks,
+// which attach to an (inode, process) pair rather than a file descriptor.
+// To avoid unlocking files prematurely when the same file is opened through different descriptors,
 // we allow only one read-lock at a time.
 //
 // This code is adapted from the Go package:
@@ -56,30 +56,29 @@ var (
 	locks  = map[inode]inodeLock{}
 )
 
-// Lock is a blocking call to try and take an exclusive file lock. It will wait
-// until it is able to obtain the exclusive file lock. It's recommended that
-// TryLock() be used over this function. This function may block the ability to
-// query the current Locked() or RLocked() status due to a RW-mutex lock.
+// Lock is a blocking call to try and take an exclusive file lock.
+// It will wait until it is able to obtain the exclusive file lock.
+// It's recommended that TryLock() be used over this function.
+// This function may block the ability to query the current Locked() or RLocked() status due to a RW-mutex lock.
 //
-// If we are already exclusive-locked, this function short-circuits and returns
-// immediately assuming it can take the mutex lock.
+// If we are already exclusive-locked, this function short-circuits and
+// returns immediately assuming it can take the mutex lock.
 //
-// If the *Flock has a shared lock (RLock), this may transparently replace the
-// shared lock with an exclusive lock on some UNIX-like operating systems. Be
-// careful when using exclusive locks in conjunction with shared locks
-// (RLock()), because calling Unlock() may accidentally release the exclusive
-// lock that was once a shared lock.
+// If the *Flock has a shared lock (RLock),
+// this may transparently replace the shared lock with an exclusive lock on some UNIX-like operating systems.
+// Be careful when using exclusive locks in conjunction with shared locks (RLock()),
+// because calling Unlock() may accidentally release the exclusive lock that was once a shared lock.
 func (f *Flock) Lock() error {
 	return f.lock(&f.l, writeLock)
 }
 
-// RLock is a blocking call to try and take a shared file lock. It will wait
-// until it is able to obtain the shared file lock. It's recommended that
-// TryRLock() be used over this function. This function may block the ability to
-// query the current Locked() or RLocked() status due to a RW-mutex lock.
+// RLock is a blocking call to try and take a shared file lock.
+// It will wait until it is able to obtain the shared file lock.
+// It's recommended that TryRLock() be used over this function.
+// This function may block the ability to query the current Locked() or RLocked() status due to a RW-mutex lock.
 //
-// If we are already shared-locked, this function short-circuits and returns
-// immediately assuming it can take the mutex lock.
+// If we are already shared-locked, this function short-circuits and
+// returns immediately assuming it can take the mutex lock.
 func (f *Flock) RLock() error {
 	return f.lock(&f.r, readLock)
 }
@@ -110,10 +109,10 @@ func (f *Flock) lock(locked *bool, flag lockType) error {
 }
 
 func (f *Flock) doLock(cmd cmdType, lt lockType, blocking bool) (bool, error) {
-	// POSIX locks apply per inode and process, and the lock for an inode is
-	// released when *any* descriptor for that inode is closed. So we need to
-	// synchronize access to each inode internally, and must serialize lock and
-	// unlock calls that refer to the same inode through different descriptors.
+	// POSIX locks apply per inode and process,
+	// and the lock for an inode is released when *any* descriptor for that inode is closed.
+	// So we need to synchronize access to each inode internally,
+	// and must serialize lock and unlock calls that refer to the same inode through different descriptors.
 	fi, err := f.fh.Stat()
 	if err != nil {
 		return false, err
@@ -179,8 +178,8 @@ func (f *Flock) Unlock() error {
 	f.m.Lock()
 	defer f.m.Unlock()
 
-	// if we aren't locked or if the lockfile instance is nil
-	// just return a nil error because we are unlocked
+	// If we aren't locked or if the lockfile instance is nil
+	// just return a nil error because we are unlocked.
 	if (!f.l && !f.r) || f.fh == nil {
 		return nil
 	}
@@ -236,26 +235,28 @@ func (f *Flock) doUnlock() (err error) {
 	return err
 }
 
-// TryLock is the preferred function for taking an exclusive file lock. This
-// function takes an RW-mutex lock before it tries to lock the file, so there is
-// the possibility that this function may block for a short time if another
-// goroutine is trying to take any action.
+// TryLock is the preferred function for taking an exclusive file lock.
+// This function takes an RW-mutex lock before it tries to lock the file,
+// so there is the possibility that this function may block for a short time
+// if another goroutine is trying to take any action.
 //
-// The actual file lock is non-blocking. If we are unable to get the exclusive
-// file lock, the function will return false instead of waiting for the lock. If
-// we get the lock, we also set the *Flock instance as being exclusive-locked.
+// The actual file lock is non-blocking.
+// If we are unable to get the exclusive file lock,
+// the function will return false instead of waiting for the lock.
+// If we get the lock, we also set the *Flock instance as being exclusive-locked.
 func (f *Flock) TryLock() (bool, error) {
 	return f.try(&f.l, writeLock)
 }
 
-// TryRLock is the preferred function for taking a shared file lock. This
-// function takes an RW-mutex lock before it tries to lock the file, so there is
-// the possibility that this function may block for a short time if another
-// goroutine is trying to take any action.
+// TryRLock is the preferred function for taking a shared file lock.
+// This function takes an RW-mutex lock before it tries to lock the file,
+// so there is the possibility that this function may block for a short time
+// if another goroutine is trying to take any action.
 //
-// The actual file lock is non-blocking. If we are unable to get the shared file
-// lock, the function will return false instead of waiting for the lock. If we
-// get the lock, we also set the *Flock instance as being share-locked.
+// The actual file lock is non-blocking.
+// If we are unable to get the shared file lock,
+// the function will return false instead of waiting for the lock.
+// If we get the lock, we also set the *Flock instance as being share-locked.
 func (f *Flock) TryRLock() (bool, error) {
 	return f.try(&f.r, readLock)
 }
