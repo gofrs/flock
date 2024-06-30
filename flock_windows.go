@@ -81,7 +81,7 @@ func (f *Flock) Unlock() error {
 		return errNo
 	}
 
-	f.fh.Close()
+	_ = f.fh.Close()
 
 	f.l = false
 	f.r = false
