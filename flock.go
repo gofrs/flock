@@ -143,10 +143,12 @@ func tryCtx(ctx context.Context, fn func() (bool, error), retryDelay time.Durati
 	if ctx.Err() != nil {
 		return false, ctx.Err()
 	}
+
 	for {
 		if ok, err := fn(); ok || err != nil {
 			return ok, err
 		}
+
 		select {
 		case <-ctx.Done():
 			return false, ctx.Err()
@@ -175,6 +177,7 @@ func (f *Flock) ensureFhState() {
 		return
 	}
 
-	f.fh.Close()
+	_ = f.fh.Close()
+
 	f.fh = nil
 }

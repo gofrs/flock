@@ -257,13 +257,14 @@ func (f *Flock) try(locked *bool, flag lockType) (bool, error) {
 		defer f.ensureFhState()
 	}
 
-	haslock, err := f.doLock(tryLock, flag, false)
+	hasLock, err := f.doLock(tryLock, flag, false)
 	if err != nil {
 		return false, err
 	}
 
-	*locked = haslock
-	return haslock, nil
+	*locked = hasLock
+
+	return hasLock, nil
 }
 
 // setlkw calls FcntlFlock with cmd for the entire file indicated by fd.

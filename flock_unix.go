@@ -72,6 +72,7 @@ func (f *Flock) lock(locked *bool, flag int) error {
 	}
 
 	*locked = true
+
 	return nil
 }
 
@@ -100,7 +101,7 @@ func (f *Flock) Unlock() error {
 		return err
 	}
 
-	f.fh.Close()
+	_ = f.fh.Close()
 
 	f.l = false
 	f.r = false
@@ -152,10 +153,10 @@ func (f *Flock) try(locked *bool, flag int) (bool, error) {
 retry:
 	err := syscall.Flock(int(f.fh.Fd()), flag|syscall.LOCK_NB)
 
-	switch err {
-	case syscall.EWOULDBLOCK:
+	switch {
+	case errors.Is(err, syscall.EWOULDBLOCK):
 		return false, nil
-	case nil:
+	case err == nil:
 		*locked = true
 		return true, nil
 	}
@@ -183,12 +184,12 @@ func (f *Flock) reopenFDOnError(err error) (bool, error) {
 	}
 	if st, err := f.fh.Stat(); err == nil {
 		// if the file is able to be read and written
-		if st.Mode()&0o600 == 0o600 {
-			f.fh.Close()
+		if st.Mode()&f.perm == f.perm {
+			_ = f.fh.Close()
 			f.fh = nil
 
-			// reopen in read-write mode and set the filehandle
-			fh, err := os.OpenFile(f.path, os.O_CREATE|os.O_RDWR, os.FileMode(0o600))
+			// reopen in read-write mode and set the file handle
+			fh, err := os.OpenFile(f.path, f.flag, f.perm)
 			if err != nil {
 				return false, err
 			}
