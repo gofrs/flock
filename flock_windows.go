@@ -130,7 +130,6 @@ func (f *Flock) try(locked *bool, flag uint32) (bool, error) {
 	}
 
 	_, errNo := lockFileEx(syscall.Handle(f.fh.Fd()), flag|winLockfileFailImmediately, 0, 1, 0, &syscall.Overlapped{})
-
 	if errNo > 0 {
 		if errNo == ErrorLockViolation || errNo == syscall.ERROR_IO_PENDING {
 			return false, nil

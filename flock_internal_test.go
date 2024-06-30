@@ -33,4 +33,7 @@ func Test(t *testing.T) {
 	require.False(t, locked)
 
 	assert.Nil(t, newLock.fh, "file handle should have been released and be nil")
+
+	err = lock.Unlock()
+	require.NoError(t, err)
 }
