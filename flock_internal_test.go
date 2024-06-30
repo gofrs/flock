@@ -8,27 +8,32 @@ package flock
 import (
 	"os"
 	"testing"
+
+	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 )
 
 func Test(t *testing.T) {
-	tmpFileFh, _ := os.CreateTemp(os.TempDir(), "go-flock-")
-	tmpFileFh.Close()
-	tmpFile := tmpFileFh.Name()
-	os.Remove(tmpFile)
+	tmpFile, err := os.CreateTemp(t.TempDir(), "go-flock-")
+	require.NoError(t, err)
 
-	lock := New(tmpFile)
+	tmpFile.Close()
+	os.Remove(tmpFile.Name())
+
+	lock := New(tmpFile.Name())
+
 	locked, err := lock.TryLock()
-	if locked == false || err != nil {
-		t.Fatalf("failed to lock: locked: %t, err: %v", locked, err)
-	}
+	require.NoError(t, err)
+	require.True(t, locked)
 
-	newLock := New(tmpFile)
+	newLock := New(tmpFile.Name())
+
 	locked, err = newLock.TryLock()
-	if locked != false || err != nil {
-		t.Fatalf("should have failed locking: locked: %t, err: %v", locked, err)
-	}
+	require.NoError(t, err)
+	require.False(t, locked)
 
-	if newLock.fh != nil {
-		t.Fatal("file handle should have been released and be nil")
-	}
+	assert.Nil(t, newLock.fh, "file handle should have been released and be nil")
+
+	err = lock.Unlock()
+	require.NoError(t, err)
 }
