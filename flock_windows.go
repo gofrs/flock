@@ -8,6 +8,21 @@ package flock
 import (
 	"errors"
 	"syscall"
+
+	"golang.org/x/sys/windows"
+)
+
+// Use of 0x00000000 for the shared lock is a guess based on some the MS Windows `LockFileEX` docs,
+// which document the `LOCKFILE_EXCLUSIVE_LOCK` flag as:
+//
+// > The function requests an exclusive lock. Otherwise, it requests a shared lock.
+//
+// https://msdn.microsoft.com/en-us/library/windows/desktop/aa365203(v=vs.85).aspx
+
+const (
+	winLockfileSharedLock      = 0x00000000
+	winLockfileFailImmediately = 0x00000001
+	winLockfileExclusiveLock   = 0x00000002
 )
 
 // ErrorLockViolation is the error code returned from the Windows syscall when a lock would block,
@@ -52,9 +67,9 @@ func (f *Flock) lock(locked *bool, flag uint32) error {
 		defer f.ensureFhState()
 	}
 
-	errNo := lockFileEx(syscall.Handle(f.fh.Fd()), flag, 0, 1, 0, &syscall.Overlapped{})
-	if errNo > 0 {
-		return errNo
+	err := windows.LockFileEx(windows.Handle(f.fh.Fd()), flag, 0, 1, 0, &windows.Overlapped{})
+	if err != nil && !errors.Is(err, syscall.Errno(0)) {
+		return err
 	}
 
 	*locked = true
@@ -81,9 +96,9 @@ func (f *Flock) Unlock() error {
 	}
 
 	// mark the file as unlocked
-	errNo := unlockFileEx(syscall.Handle(f.fh.Fd()), 0, 1, 0, &syscall.Overlapped{})
-	if errNo > 0 {
-		return errNo
+	err := windows.UnlockFileEx(windows.Handle(f.fh.Fd()), 0, 1, 0, &windows.Overlapped{})
+	if err != nil && !errors.Is(err, syscall.Errno(0)) {
+		return err
 	}
 
 	f.reset()
@@ -132,13 +147,13 @@ func (f *Flock) try(locked *bool, flag uint32) (bool, error) {
 		defer f.ensureFhState()
 	}
 
-	errNo := lockFileEx(syscall.Handle(f.fh.Fd()), flag|winLockfileFailImmediately, 0, 1, 0, &syscall.Overlapped{})
-	if errNo > 0 {
-		if errors.Is(errNo, ErrorLockViolation) || errors.Is(errNo, syscall.ERROR_IO_PENDING) {
+	err := windows.LockFileEx(windows.Handle(f.fh.Fd()), flag|winLockfileFailImmediately, 0, 1, 0, &windows.Overlapped{})
+	if err != nil && !errors.Is(err, syscall.Errno(0)) {
+		if errors.Is(err, ErrorLockViolation) || errors.Is(err, syscall.ERROR_IO_PENDING) {
 			return false, nil
 		}
 
-		return false, errNo
+		return false, err
 	}
 
 	*locked = true
