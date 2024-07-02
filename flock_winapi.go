@@ -10,18 +10,8 @@ package flock
 import (
 	"syscall"
 	"unsafe"
-)
 
-var (
-	kernel32, _         = syscall.LoadLibrary("kernel32.dll")
-	procLockFileEx, _   = syscall.GetProcAddress(kernel32, "LockFileEx")
-	procUnlockFileEx, _ = syscall.GetProcAddress(kernel32, "UnlockFileEx")
-)
-
-const (
-	winLockfileFailImmediately = 0x00000001
-	winLockfileExclusiveLock   = 0x00000002
-	winLockfileSharedLock      = 0x00000000
+	"golang.org/x/sys/windows"
 )
 
 // Use of 0x00000000 for the shared lock is a guess based on some the MS Windows `LockFileEX` docs,
@@ -31,10 +21,23 @@ const (
 //
 // https://msdn.microsoft.com/en-us/library/windows/desktop/aa365203(v=vs.85).aspx
 
+const (
+	winLockfileSharedLock      = 0x00000000
+	winLockfileFailImmediately = 0x00000001
+	winLockfileExclusiveLock   = 0x00000002
+)
+
+var modkernel32 = windows.NewLazySystemDLL("kernel32.dll")
+
+var (
+	procLockFileEx   = modkernel32.NewProc("LockFileEx")
+	procUnlockFileEx = modkernel32.NewProc("UnlockFileEx")
+)
+
 //nolint:unparam
 func lockFileEx(handle syscall.Handle, flags, reserved, numberOfBytesToLockLow, numberOfBytesToLockHigh uint32, offset *syscall.Overlapped) (bool, syscall.Errno) {
 	r1, _, errNo := syscall.SyscallN(
-		procLockFileEx,
+		procLockFileEx.Addr(),
 		uintptr(handle),
 		uintptr(flags),
 		uintptr(reserved),
@@ -55,7 +58,7 @@ func lockFileEx(handle syscall.Handle, flags, reserved, numberOfBytesToLockLow, 
 
 func unlockFileEx(handle syscall.Handle, reserved, numberOfBytesToLockLow, numberOfBytesToLockHigh uint32, offset *syscall.Overlapped) (bool, syscall.Errno) {
 	r1, _, errNo := syscall.SyscallN(
-		procUnlockFileEx,
+		procUnlockFileEx.Addr(),
 		uintptr(handle),
 		uintptr(reserved),
 		uintptr(numberOfBytesToLockLow),
