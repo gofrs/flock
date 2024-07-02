@@ -10,7 +10,8 @@ package flock
 import (
 	"errors"
 	"os"
-	"syscall"
+
+	"golang.org/x/sys/unix"
 )
 
 // Lock is a blocking call to try and take an exclusive file lock.
@@ -26,7 +27,7 @@ import (
 // Be careful when using exclusive locks in conjunction with shared locks (RLock()),
 // because calling Unlock() may accidentally release the exclusive lock that was once a shared lock.
 func (f *Flock) Lock() error {
-	return f.lock(&f.l, syscall.LOCK_EX)
+	return f.lock(&f.l, unix.LOCK_EX)
 }
 
 // RLock is a blocking call to try and take a shared file lock.
@@ -37,7 +38,7 @@ func (f *Flock) Lock() error {
 // If we are already shared-locked,
 // this function short-circuits and returns immediately assuming it can take the mutex lock.
 func (f *Flock) RLock() error {
-	return f.lock(&f.r, syscall.LOCK_SH)
+	return f.lock(&f.r, unix.LOCK_SH)
 }
 
 func (f *Flock) lock(locked *bool, flag int) error {
@@ -56,7 +57,7 @@ func (f *Flock) lock(locked *bool, flag int) error {
 		defer f.ensureFhState()
 	}
 
-	err := syscall.Flock(int(f.fh.Fd()), flag)
+	err := unix.Flock(int(f.fh.Fd()), flag)
 	if err != nil {
 		shouldRetry, reopenErr := f.reopenFDOnError(err)
 		if reopenErr != nil {
@@ -67,7 +68,7 @@ func (f *Flock) lock(locked *bool, flag int) error {
 			return err
 		}
 
-		err = syscall.Flock(int(f.fh.Fd()), flag)
+		err = unix.Flock(int(f.fh.Fd()), flag)
 		if err != nil {
 			return err
 		}
@@ -83,7 +84,7 @@ func (f *Flock) lock(locked *bool, flag int) error {
 // so while it is running the Locked() and RLocked() functions will be blocked.
 //
 // This function short-circuits if we are unlocked already.
-// If not, it calls syscall.LOCK_UN on the file and closes the file descriptor.
+// If not, it calls unix.LOCK_UN on the file and closes the file descriptor.
 // It does not remove the file from disk. It's up to your application to do.
 //
 // Please note,
@@ -101,7 +102,7 @@ func (f *Flock) Unlock() error {
 	}
 
 	// Mark the file as unlocked.
-	err := syscall.Flock(int(f.fh.Fd()), syscall.LOCK_UN)
+	err := unix.Flock(int(f.fh.Fd()), unix.LOCK_UN)
 	if err != nil {
 		return err
 	}
@@ -121,7 +122,7 @@ func (f *Flock) Unlock() error {
 // the function will return false instead of waiting for the lock.
 // If we get the lock, we also set the *Flock instance as being exclusive-locked.
 func (f *Flock) TryLock() (bool, error) {
-	return f.try(&f.l, syscall.LOCK_EX)
+	return f.try(&f.l, unix.LOCK_EX)
 }
 
 // TryRLock is the preferred function for taking a shared file lock.
@@ -134,7 +135,7 @@ func (f *Flock) TryLock() (bool, error) {
 // the function will return false instead of waiting for the lock.
 // If we get the lock, we also set the *Flock instance as being share-locked.
 func (f *Flock) TryRLock() (bool, error) {
-	return f.try(&f.r, syscall.LOCK_SH)
+	return f.try(&f.r, unix.LOCK_SH)
 }
 
 func (f *Flock) try(locked *bool, flag int) (bool, error) {
@@ -155,10 +156,10 @@ func (f *Flock) try(locked *bool, flag int) (bool, error) {
 
 	var retried bool
 retry:
-	err := syscall.Flock(int(f.fh.Fd()), flag|syscall.LOCK_NB)
+	err := unix.Flock(int(f.fh.Fd()), flag|unix.LOCK_NB)
 
 	switch {
-	case errors.Is(err, syscall.EWOULDBLOCK):
+	case errors.Is(err, unix.EWOULDBLOCK):
 		return false, nil
 	case err == nil:
 		*locked = true
@@ -183,7 +184,7 @@ retry:
 // > Since Linux 3.4 (commit 55725513)
 // > Probably NFSv4 where flock() is emulated by fcntl().
 func (f *Flock) reopenFDOnError(err error) (bool, error) {
-	if !errors.Is(err, syscall.EIO) && !errors.Is(err, syscall.EBADF) {
+	if !errors.Is(err, unix.EIO) && !errors.Is(err, unix.EBADF) {
 		return false, nil
 	}
 
