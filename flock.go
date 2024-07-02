@@ -19,6 +19,7 @@ package flock
 
 import (
 	"context"
+	"io/fs"
 	"os"
 	"runtime"
 	"sync"
@@ -35,7 +36,7 @@ func SetFlag(flag int) Option {
 }
 
 // SetPermissions sets the OS permissions to set on the file.
-func SetPermissions(perm os.FileMode) Option {
+func SetPermissions(perm fs.FileMode) Option {
 	return func(f *Flock) {
 		f.perm = perm
 	}
@@ -53,7 +54,7 @@ type Flock struct {
 	// flag is the flag used to create/open the file.
 	flag int
 	// perm is the OS permissions to set on the file.
-	perm os.FileMode
+	perm fs.FileMode
 }
 
 // New returns a new instance of *Flock. The only parameter
@@ -72,7 +73,7 @@ func New(path string, opts ...Option) *Flock {
 	f := &Flock{
 		path: path,
 		flag: flags,
-		perm: os.FileMode(0o600),
+		perm: fs.FileMode(0o600),
 	}
 
 	for _, opt := range opts {
