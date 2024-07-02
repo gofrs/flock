@@ -56,7 +56,8 @@ func (f *Flock) lock(locked *bool, flag int) error {
 		defer f.ensureFhState()
 	}
 
-	if err := syscall.Flock(int(f.fh.Fd()), flag); err != nil {
+	err := syscall.Flock(int(f.fh.Fd()), flag)
+	if err != nil {
 		shouldRetry, reopenErr := f.reopenFDOnError(err)
 		if reopenErr != nil {
 			return reopenErr
@@ -66,7 +67,8 @@ func (f *Flock) lock(locked *bool, flag int) error {
 			return err
 		}
 
-		if err = syscall.Flock(int(f.fh.Fd()), flag); err != nil {
+		err = syscall.Flock(int(f.fh.Fd()), flag)
+		if err != nil {
 			return err
 		}
 	}
@@ -99,15 +101,12 @@ func (f *Flock) Unlock() error {
 	}
 
 	// Mark the file as unlocked.
-	if err := syscall.Flock(int(f.fh.Fd()), syscall.LOCK_UN); err != nil {
+	err := syscall.Flock(int(f.fh.Fd()), syscall.LOCK_UN)
+	if err != nil {
 		return err
 	}
 
-	_ = f.fh.Close()
-
-	f.l = false
-	f.r = false
-	f.fh = nil
+	f.reset()
 
 	return nil
 }
@@ -167,7 +166,8 @@ retry:
 	}
 
 	if !retried {
-		if shouldRetry, reopenErr := f.reopenFDOnError(err); reopenErr != nil {
+		shouldRetry, reopenErr := f.reopenFDOnError(err)
+		if reopenErr != nil {
 			return false, reopenErr
 		} else if shouldRetry {
 			retried = true
@@ -180,9 +180,8 @@ retry:
 
 // reopenFDOnError determines whether we should reopen the file handle in readwrite mode and try again.
 // This comes from `util-linux/sys-utils/flock.c`:
-//
-//	Since Linux 3.4 (commit 55725513)
-//	Probably NFSv4 where flock() is emulated by fcntl().
+// > Since Linux 3.4 (commit 55725513)
+// > Probably NFSv4 where flock() is emulated by fcntl().
 func (f *Flock) reopenFDOnError(err error) (bool, error) {
 	if !errors.Is(err, syscall.EIO) && !errors.Is(err, syscall.EBADF) {
 		return false, nil
