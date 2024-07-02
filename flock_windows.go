@@ -52,7 +52,7 @@ func (f *Flock) lock(locked *bool, flag uint32) error {
 		defer f.ensureFhState()
 	}
 
-	_, errNo := lockFileEx(syscall.Handle(f.fh.Fd()), flag, 0, 1, 0, &syscall.Overlapped{})
+	errNo := lockFileEx(syscall.Handle(f.fh.Fd()), flag, 0, 1, 0, &syscall.Overlapped{})
 	if errNo > 0 {
 		return errNo
 	}
@@ -81,7 +81,7 @@ func (f *Flock) Unlock() error {
 	}
 
 	// mark the file as unlocked
-	_, errNo := unlockFileEx(syscall.Handle(f.fh.Fd()), 0, 1, 0, &syscall.Overlapped{})
+	errNo := unlockFileEx(syscall.Handle(f.fh.Fd()), 0, 1, 0, &syscall.Overlapped{})
 	if errNo > 0 {
 		return errNo
 	}
@@ -132,7 +132,7 @@ func (f *Flock) try(locked *bool, flag uint32) (bool, error) {
 		defer f.ensureFhState()
 	}
 
-	_, errNo := lockFileEx(syscall.Handle(f.fh.Fd()), flag|winLockfileFailImmediately, 0, 1, 0, &syscall.Overlapped{})
+	errNo := lockFileEx(syscall.Handle(f.fh.Fd()), flag|winLockfileFailImmediately, 0, 1, 0, &syscall.Overlapped{})
 	if errNo > 0 {
 		if errors.Is(errNo, ErrorLockViolation) || errors.Is(errNo, syscall.ERROR_IO_PENDING) {
 			return false, nil

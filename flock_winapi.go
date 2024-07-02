@@ -34,8 +34,7 @@ var (
 	procUnlockFileEx = modkernel32.NewProc("UnlockFileEx")
 )
 
-//nolint:unparam
-func lockFileEx(handle syscall.Handle, flags, reserved, numberOfBytesToLockLow, numberOfBytesToLockHigh uint32, offset *syscall.Overlapped) (bool, syscall.Errno) {
+func lockFileEx(handle syscall.Handle, flags, reserved, numberOfBytesToLockLow, numberOfBytesToLockHigh uint32, offset *syscall.Overlapped) syscall.Errno {
 	r1, _, errNo := syscall.SyscallN(
 		procLockFileEx.Addr(),
 		uintptr(handle),
@@ -46,17 +45,17 @@ func lockFileEx(handle syscall.Handle, flags, reserved, numberOfBytesToLockLow, 
 		uintptr(unsafe.Pointer(offset)))
 
 	if r1 == 1 {
-		return true, 0
+		return 0
 	}
 
 	if errNo == 0 {
-		return false, syscall.EINVAL
+		return syscall.EINVAL
 	}
 
-	return false, errNo
+	return errNo
 }
 
-func unlockFileEx(handle syscall.Handle, reserved, numberOfBytesToLockLow, numberOfBytesToLockHigh uint32, offset *syscall.Overlapped) (bool, syscall.Errno) {
+func unlockFileEx(handle syscall.Handle, reserved, numberOfBytesToLockLow, numberOfBytesToLockHigh uint32, offset *syscall.Overlapped) syscall.Errno {
 	r1, _, errNo := syscall.SyscallN(
 		procUnlockFileEx.Addr(),
 		uintptr(handle),
@@ -66,12 +65,12 @@ func unlockFileEx(handle syscall.Handle, reserved, numberOfBytesToLockLow, numbe
 		uintptr(unsafe.Pointer(offset)))
 
 	if r1 == 1 {
-		return true, 0
+		return 0
 	}
 
 	if errNo == 0 {
-		return false, syscall.EINVAL
+		return syscall.EINVAL
 	}
 
-	return false, errNo
+	return errNo
 }
