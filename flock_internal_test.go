@@ -3,6 +3,8 @@
 // Use of this source code is governed by the BSD 3-Clause
 // license that can be found in the LICENSE file.
 
+//go:build !js && !plan9 && !wasip1
+
 package flock
 
 import (
