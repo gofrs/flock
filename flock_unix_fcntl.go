@@ -27,8 +27,6 @@ import (
 	"sync"
 	"syscall"
 	"time"
-
-	"golang.org/x/sys/unix"
 )
 
 // https://github.com/golang/go/blob/09aeb6e33ab426eff4676a3baf694d5a3019e9fc/src/cmd/go/internal/lockedfile/internal/filelock/filelock_fcntl.go#L28
@@ -50,8 +48,8 @@ func (lt lockType) String() string {
 
 // https://github.com/golang/go/blob/09aeb6e33ab426eff4676a3baf694d5a3019e9fc/src/cmd/go/internal/lockedfile/internal/filelock/filelock_fcntl.go#L30-L33
 const (
-	readLock  lockType = unix.F_RDLCK
-	writeLock lockType = unix.F_WRLCK
+	readLock  lockType = syscall.F_RDLCK
+	writeLock lockType = syscall.F_WRLCK
 )
 
 // https://github.com/golang/go/blob/09aeb6e33ab426eff4676a3baf694d5a3019e9fc/src/cmd/go/internal/lockedfile/internal/filelock/filelock_fcntl.go#L35
@@ -66,8 +64,8 @@ type inodeLock struct {
 type cmdType int
 
 const (
-	tryLock  cmdType = unix.F_SETLK
-	waitLock cmdType = unix.F_SETLKW
+	tryLock  cmdType = syscall.F_SETLK
+	waitLock cmdType = syscall.F_SETLKW
 )
 
 var (
@@ -251,7 +249,7 @@ func (f *Flock) doLock(cmd cmdType, lt lockType, blocking bool) (bool, error) {
 	if err != nil {
 		f.doUnlock()
 
-		if cmd == tryLock && errors.Is(err, unix.EACCES) {
+		if cmd == tryLock && errors.Is(err, syscall.EACCES) {
 			return false, nil
 		}
 
@@ -298,7 +296,7 @@ func (f *Flock) doUnlock() (err error) {
 	mu.Unlock()
 
 	if owner == f {
-		err = setlkw(f.fh.Fd(), waitLock, unix.F_UNLCK)
+		err = setlkw(f.fh.Fd(), waitLock, syscall.F_UNLCK)
 	}
 
 	mu.Lock()
@@ -379,13 +377,13 @@ func (f *Flock) try(locked *bool, flag lockType) (bool, error) {
 // https://github.com/golang/go/blob/09aeb6e33ab426eff4676a3baf694d5a3019e9fc/src/cmd/go/internal/lockedfile/internal/filelock/filelock_fcntl.go#L198
 func setlkw(fd uintptr, cmd cmdType, lt lockType) error {
 	for {
-		err := unix.FcntlFlock(fd, int(cmd), &unix.Flock_t{
+		err := syscall.FcntlFlock(fd, int(cmd), &syscall.Flock_t{
 			Type:   int16(lt),
 			Whence: io.SeekStart,
 			Start:  0,
 			Len:    0, // All bytes.
 		})
-		if !errors.Is(err, unix.EINTR) {
+		if !errors.Is(err, syscall.EINTR) {
 			return err
 		}
 	}
