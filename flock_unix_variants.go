@@ -15,7 +15,7 @@
 // This code is adapted from the Go package:
 // cmd/go/internal/lockedfile/internal/filelock
 
-//go:build aix || solaris
+//go:build aix || (solaris && !illumos)
 
 package flock
 
