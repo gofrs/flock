@@ -99,7 +99,8 @@ func (f *Flock) lock(locked *bool, flag lockType) error {
 		defer f.ensureFhState()
 	}
 
-	if _, err := f.doLock(waitLock, flag, true); err != nil {
+	_, err := f.doLock(waitLock, flag, true)
+	if err != nil {
 		return err
 	}
 
@@ -137,16 +138,19 @@ func (f *Flock) doLock(cmd cmdType, lt lockType, blocking bool) (bool, error) {
 
 	l := locks[ino]
 
-	if l.owner == f {
+	switch {
+	case l.owner == f:
 		// This file already owns the lock, but the call may change its lock type.
-	} else if l.owner == nil {
+	case l.owner == nil:
 		// No owner: it's ours now.
 		l.owner = f
-	} else if !blocking {
+
+	case !blocking:
 		// Already owned: cannot take the lock.
 		mu.Unlock()
 		return false, nil
-	} else {
+
+	default:
 		// Already owned: add a channel to wait on.
 		wait = make(chan *Flock)
 		l.queue = append(l.queue, wait)
@@ -188,11 +192,7 @@ func (f *Flock) Unlock() error {
 		return err
 	}
 
-	_ = f.fh.Close()
-
-	f.l = false
-	f.r = false
-	f.fh = nil
+	f.reset()
 
 	return nil
 }

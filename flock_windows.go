@@ -6,6 +6,7 @@
 package flock
 
 import (
+	"errors"
 	"syscall"
 )
 
@@ -85,11 +86,7 @@ func (f *Flock) Unlock() error {
 		return errNo
 	}
 
-	_ = f.fh.Close()
-
-	f.l = false
-	f.r = false
-	f.fh = nil
+	f.reset()
 
 	return nil
 }
@@ -137,7 +134,7 @@ func (f *Flock) try(locked *bool, flag uint32) (bool, error) {
 
 	_, errNo := lockFileEx(syscall.Handle(f.fh.Fd()), flag|winLockfileFailImmediately, 0, 1, 0, &syscall.Overlapped{})
 	if errNo > 0 {
-		if errNo == ErrorLockViolation || errNo == syscall.ERROR_IO_PENDING {
+		if errors.Is(errNo, ErrorLockViolation) || errors.Is(errNo, syscall.ERROR_IO_PENDING) {
 			return false, nil
 		}
 

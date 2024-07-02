@@ -185,3 +185,12 @@ func (f *Flock) ensureFhState() {
 
 	f.fh = nil
 }
+
+func (f *Flock) reset() {
+	f.l = false
+	f.r = false
+
+	_ = f.fh.Close()
+
+	f.fh = nil
+}
