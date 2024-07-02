@@ -8,7 +8,17 @@ package flock
 import (
 	"errors"
 	"syscall"
+
+	"golang.org/x/sys/windows"
 )
+
+// Use of 0x00000000 for the shared lock is a guess based on some the MS Windows `LockFileEX` docs,
+// which document the `LOCKFILE_EXCLUSIVE_LOCK` flag as:
+//
+// > The function requests an exclusive lock. Otherwise, it requests a shared lock.
+//
+// https://msdn.microsoft.com/en-us/library/windows/desktop/aa365203(v=vs.85).aspx
+const winLockfileSharedLock = 0x00000000
 
 // ErrorLockViolation is the error code returned from the Windows syscall when a lock would block,
 // and you ask to fail immediately.
@@ -22,7 +32,7 @@ const ErrorLockViolation syscall.Errno = 0x21 // 33
 // If we are already locked, this function short-circuits and
 // returns immediately assuming it can take the mutex lock.
 func (f *Flock) Lock() error {
-	return f.lock(&f.l, winLockfileExclusiveLock)
+	return f.lock(&f.l, windows.LOCKFILE_EXCLUSIVE_LOCK)
 }
 
 // RLock is a blocking call to try and take a shared file lock.
@@ -52,9 +62,9 @@ func (f *Flock) lock(locked *bool, flag uint32) error {
 		defer f.ensureFhState()
 	}
 
-	_, errNo := lockFileEx(syscall.Handle(f.fh.Fd()), flag, 0, 1, 0, &syscall.Overlapped{})
-	if errNo > 0 {
-		return errNo
+	err := windows.LockFileEx(windows.Handle(f.fh.Fd()), flag, 0, 1, 0, &windows.Overlapped{})
+	if err != nil && !errors.Is(err, syscall.Errno(0)) {
+		return err
 	}
 
 	*locked = true
@@ -81,9 +91,9 @@ func (f *Flock) Unlock() error {
 	}
 
 	// mark the file as unlocked
-	_, errNo := unlockFileEx(syscall.Handle(f.fh.Fd()), 0, 1, 0, &syscall.Overlapped{})
-	if errNo > 0 {
-		return errNo
+	err := windows.UnlockFileEx(windows.Handle(f.fh.Fd()), 0, 1, 0, &windows.Overlapped{})
+	if err != nil && !errors.Is(err, syscall.Errno(0)) {
+		return err
 	}
 
 	f.reset()
@@ -101,7 +111,7 @@ func (f *Flock) Unlock() error {
 // the function will return false instead of waiting for the lock.
 // If we get the lock, we also set the *Flock instance as being exclusive-locked.
 func (f *Flock) TryLock() (bool, error) {
-	return f.try(&f.l, winLockfileExclusiveLock)
+	return f.try(&f.l, windows.LOCKFILE_EXCLUSIVE_LOCK)
 }
 
 // TryRLock is the preferred function for taking a shared file lock.
@@ -132,13 +142,13 @@ func (f *Flock) try(locked *bool, flag uint32) (bool, error) {
 		defer f.ensureFhState()
 	}
 
-	_, errNo := lockFileEx(syscall.Handle(f.fh.Fd()), flag|winLockfileFailImmediately, 0, 1, 0, &syscall.Overlapped{})
-	if errNo > 0 {
-		if errors.Is(errNo, ErrorLockViolation) || errors.Is(errNo, syscall.ERROR_IO_PENDING) {
+	err := windows.LockFileEx(windows.Handle(f.fh.Fd()), flag|windows.LOCKFILE_FAIL_IMMEDIATELY, 0, 1, 0, &windows.Overlapped{})
+	if err != nil && !errors.Is(err, syscall.Errno(0)) {
+		if errors.Is(err, ErrorLockViolation) || errors.Is(err, syscall.ERROR_IO_PENDING) {
 			return false, nil
 		}
 
-		return false, errNo
+		return false, err
 	}
 
 	*locked = true
