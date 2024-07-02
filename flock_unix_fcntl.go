@@ -140,6 +140,7 @@ func (f *Flock) doLock(cmd cmdType, lt lockType, blocking bool) (bool, error) {
 		return false, err
 	}
 
+	// Note(ldez): don't replace `syscall.Stat_t` by `unix.Stat_t` because `FileInfo.Sys()` returns `syscall.Stat_t`
 	ino := fi.Sys().(*syscall.Stat_t).Ino
 
 	mu.Lock()
@@ -234,7 +235,7 @@ func (f *Flock) doLock(cmd cmdType, lt lockType, blocking bool) (bool, error) {
 	const maxSleep = 500 * time.Millisecond
 	for {
 		err = setlkw(f.fh.Fd(), cmd, lt)
-		if !errors.Is(err, syscall.EDEADLK) {
+		if !errors.Is(err, unix.EDEADLK) {
 			break
 		}
 

@@ -9,7 +9,6 @@ package flock
 
 import (
 	"errors"
-	"syscall"
 
 	"golang.org/x/sys/windows"
 )
@@ -24,7 +23,7 @@ const winLockfileSharedLock = 0x00000000
 
 // ErrorLockViolation is the error code returned from the Windows syscall when a lock would block,
 // and you ask to fail immediately.
-const ErrorLockViolation syscall.Errno = 0x21 // 33
+const ErrorLockViolation windows.Errno = 0x21 // 33
 
 // Lock is a blocking call to try and take an exclusive file lock.
 // It will wait until it is able to obtain the exclusive file lock.
@@ -65,7 +64,7 @@ func (f *Flock) lock(locked *bool, flag uint32) error {
 	}
 
 	err := windows.LockFileEx(windows.Handle(f.fh.Fd()), flag, 0, 1, 0, &windows.Overlapped{})
-	if err != nil && !errors.Is(err, syscall.Errno(0)) {
+	if err != nil && !errors.Is(err, windows.Errno(0)) {
 		return err
 	}
 
@@ -94,7 +93,7 @@ func (f *Flock) Unlock() error {
 
 	// mark the file as unlocked
 	err := windows.UnlockFileEx(windows.Handle(f.fh.Fd()), 0, 1, 0, &windows.Overlapped{})
-	if err != nil && !errors.Is(err, syscall.Errno(0)) {
+	if err != nil && !errors.Is(err, windows.Errno(0)) {
 		return err
 	}
 
@@ -145,8 +144,8 @@ func (f *Flock) try(locked *bool, flag uint32) (bool, error) {
 	}
 
 	err := windows.LockFileEx(windows.Handle(f.fh.Fd()), flag|windows.LOCKFILE_FAIL_IMMEDIATELY, 0, 1, 0, &windows.Overlapped{})
-	if err != nil && !errors.Is(err, syscall.Errno(0)) {
-		if errors.Is(err, ErrorLockViolation) || errors.Is(err, syscall.ERROR_IO_PENDING) {
+	if err != nil && !errors.Is(err, windows.Errno(0)) {
+		if errors.Is(err, ErrorLockViolation) || errors.Is(err, windows.ERROR_IO_PENDING) {
 			return false, nil
 		}
 
