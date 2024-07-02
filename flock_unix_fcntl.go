@@ -12,8 +12,8 @@
 // To avoid unlocking files prematurely when the same file is opened through different descriptors,
 // we allow only one read-lock at a time.
 //
-// This code is adapted from the Go package (go.12):
-// https://github.com/golang/go/blob/release-branch.go1.12/src/cmd/go/internal/lockedfile/internal/filelock/filelock_fcntl.go
+// This code is adapted from the Go package (go.22):
+// https://github.com/golang/go/blob/release-branch.go1.22/src/cmd/go/internal/lockedfile/internal/filelock/filelock_fcntl.go
 
 //go:build aix || (solaris && !illumos)
 
@@ -23,8 +23,10 @@ import (
 	"errors"
 	"io"
 	"io/fs"
+	"math/rand"
 	"sync"
 	"syscall"
+	"time"
 
 	"golang.org/x/sys/unix"
 )
@@ -183,7 +185,69 @@ func (f *Flock) doLock(cmd cmdType, lt lockType, blocking bool) (bool, error) {
 		wait <- f
 	}
 
-	err = setlkw(f.fh.Fd(), cmd, lt)
+	// Spurious EDEADLK errors arise on platforms that compute deadlock graphs at
+	// the process, rather than thread, level. Consider processes P and Q, with
+	// threads P.1, P.2, and Q.3. The following trace is NOT a deadlock, but will be
+	// reported as a deadlock on systems that consider only process granularity:
+	//
+	// 	P.1 locks file A.
+	// 	Q.3 locks file B.
+	// 	Q.3 blocks on file A.
+	// 	P.2 blocks on file B. (This is erroneously reported as a deadlock.)
+	// 	P.1 unlocks file A.
+	// 	Q.3 unblocks and locks file A.
+	// 	Q.3 unlocks files A and B.
+	// 	P.2 unblocks and locks file B.
+	// 	P.2 unlocks file B.
+	//
+	// These spurious errors were observed in practice on AIX and Solaris in
+	// cmd/go: see https://golang.org/issue/32817.
+	//
+	// We work around this bug by treating EDEADLK as always spurious. If there
+	// really is a lock-ordering bug between the interacting processes, it will
+	// become a livelock instead, but that's not appreciably worse than if we had
+	// a proper flock implementation (which generally does not even attempt to
+	// diagnose deadlocks).
+	//
+	// In the above example, that changes the trace to:
+	//
+	// 	P.1 locks file A.
+	// 	Q.3 locks file B.
+	// 	Q.3 blocks on file A.
+	// 	P.2 spuriously fails to lock file B and goes to sleep.
+	// 	P.1 unlocks file A.
+	// 	Q.3 unblocks and locks file A.
+	// 	Q.3 unlocks files A and B.
+	// 	P.2 wakes up and locks file B.
+	// 	P.2 unlocks file B.
+	//
+	// We know that the retry loop will not introduce a *spurious* livelock
+	// because, according to the POSIX specification, EDEADLK is only to be
+	// returned when “the lock is blocked by a lock from another process”.
+	// If that process is blocked on some lock that we are holding, then the
+	// resulting livelock is due to a real deadlock (and would manifest as such
+	// when using, for example, the flock implementation of this package).
+	// If the other process is *not* blocked on some other lock that we are
+	// holding, then it will eventually release the requested lock.
+
+	nextSleep := 1 * time.Millisecond
+	const maxSleep = 500 * time.Millisecond
+	for {
+		err = setlkw(f.fh.Fd(), cmd, lt)
+		if !errors.Is(err, syscall.EDEADLK) {
+			break
+		}
+
+		time.Sleep(nextSleep)
+
+		nextSleep += nextSleep
+		if nextSleep > maxSleep {
+			nextSleep = maxSleep
+		}
+		// Apply 10% jitter to avoid synchronizing collisions when we finally unblock.
+		nextSleep += time.Duration((0.1*rand.Float64() - 0.05) * float64(nextSleep))
+	}
+
 	if err != nil {
 		f.doUnlock()
 
@@ -191,7 +255,11 @@ func (f *Flock) doLock(cmd cmdType, lt lockType, blocking bool) (bool, error) {
 			return false, nil
 		}
 
-		return false, err
+		return false, &fs.PathError{
+			Op:   lt.String(),
+			Path: f.Path(),
+			Err:  err,
+		}
 	}
 
 	return true, nil
