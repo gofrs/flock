@@ -3,7 +3,7 @@
 // Use of this source code is governed by the BSD 3-Clause
 // license that can be found in the LICENSE file.
 
-//go:build !aix && (!solaris || illumos) && !windows
+//go:build darwin || dragonfly || freebsd || illumos || linux || netbsd || openbsd
 
 package flock
 
