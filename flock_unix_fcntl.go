@@ -12,8 +12,8 @@
 // To avoid unlocking files prematurely when the same file is opened through different descriptors,
 // we allow only one read-lock at a time.
 //
-// This code is adapted from the Go package:
-// cmd/go/internal/lockedfile/internal/filelock
+// This code is adapted from the Go package (go.12):
+// https://github.com/golang/go/blob/release-branch.go1.12/src/cmd/go/internal/lockedfile/internal/filelock/filelock_fcntl.go
 
 //go:build aix || (solaris && !illumos)
 
@@ -29,12 +29,37 @@ import (
 	"golang.org/x/sys/unix"
 )
 
+// https://github.com/golang/go/blob/09aeb6e33ab426eff4676a3baf694d5a3019e9fc/src/cmd/go/internal/lockedfile/internal/filelock/filelock_fcntl.go#L28
 type lockType int16
 
+// String returns the name of the function corresponding to lt
+// (Lock, RLock, or Unlock).
+// https://github.com/golang/go/blob/09aeb6e33ab426eff4676a3baf694d5a3019e9fc/src/cmd/go/internal/lockedfile/internal/filelock/filelock.go#L67
+func (lt lockType) String() string {
+	switch lt {
+	case readLock:
+		return "RLock"
+	case writeLock:
+		return "Lock"
+	default:
+		return "Unlock"
+	}
+}
+
+// https://github.com/golang/go/blob/09aeb6e33ab426eff4676a3baf694d5a3019e9fc/src/cmd/go/internal/lockedfile/internal/filelock/filelock_fcntl.go#L30-L33
 const (
 	readLock  lockType = unix.F_RDLCK
 	writeLock lockType = unix.F_WRLCK
 )
+
+// https://github.com/golang/go/blob/09aeb6e33ab426eff4676a3baf694d5a3019e9fc/src/cmd/go/internal/lockedfile/internal/filelock/filelock_fcntl.go#L35
+type inode = uint64
+
+// https://github.com/golang/go/blob/09aeb6e33ab426eff4676a3baf694d5a3019e9fc/src/cmd/go/internal/lockedfile/internal/filelock/filelock_fcntl.go#L37-L40
+type inodeLock struct {
+	owner *Flock
+	queue []<-chan *Flock
+}
 
 type cmdType int
 
@@ -42,13 +67,6 @@ const (
 	tryLock  cmdType = unix.F_SETLK
 	waitLock cmdType = unix.F_SETLKW
 )
-
-type inode = uint64
-
-type inodeLock struct {
-	owner *Flock
-	queue []<-chan *Flock
-}
 
 var (
 	mu     sync.Mutex
@@ -109,6 +127,7 @@ func (f *Flock) lock(locked *bool, flag lockType) error {
 	return nil
 }
 
+// https://github.com/golang/go/blob/09aeb6e33ab426eff4676a3baf694d5a3019e9fc/src/cmd/go/internal/lockedfile/internal/filelock/filelock_fcntl.go#L48
 func (f *Flock) doLock(cmd cmdType, lt lockType, blocking bool) (bool, error) {
 	// POSIX locks apply per inode and process,
 	// and the lock for an inode is released when *any* descriptor for that inode is closed.
@@ -119,7 +138,7 @@ func (f *Flock) doLock(cmd cmdType, lt lockType, blocking bool) (bool, error) {
 		return false, err
 	}
 
-	ino := inode(fi.Sys().(*syscall.Stat_t).Ino)
+	ino := fi.Sys().(*syscall.Stat_t).Ino
 
 	mu.Lock()
 
@@ -127,6 +146,7 @@ func (f *Flock) doLock(cmd cmdType, lt lockType, blocking bool) (bool, error) {
 		mu.Unlock()
 
 		return false, &os.PathError{
+			Op:   lt.String(),
 			Path: f.Path(),
 			Err:  errors.New("inode for file changed since last Lock or RLock"),
 		}
@@ -168,7 +188,7 @@ func (f *Flock) doLock(cmd cmdType, lt lockType, blocking bool) (bool, error) {
 	if err != nil {
 		f.doUnlock()
 
-		if cmd == tryLock && err == unix.EACCES {
+		if cmd == tryLock && errors.Is(err, unix.EACCES) {
 			return false, nil
 		}
 
@@ -197,6 +217,7 @@ func (f *Flock) Unlock() error {
 	return nil
 }
 
+// https://github.com/golang/go/blob/09aeb6e33ab426eff4676a3baf694d5a3019e9fc/src/cmd/go/internal/lockedfile/internal/filelock/filelock_fcntl.go#L163
 func (f *Flock) doUnlock() (err error) {
 	var owner *Flock
 
@@ -288,6 +309,7 @@ func (f *Flock) try(locked *bool, flag lockType) (bool, error) {
 }
 
 // setlkw calls FcntlFlock with cmd for the entire file indicated by fd.
+// https://github.com/golang/go/blob/09aeb6e33ab426eff4676a3baf694d5a3019e9fc/src/cmd/go/internal/lockedfile/internal/filelock/filelock_fcntl.go#L198
 func setlkw(fd uintptr, cmd cmdType, lt lockType) error {
 	for {
 		err := unix.FcntlFlock(fd, int(cmd), &unix.Flock_t{
@@ -296,7 +318,7 @@ func setlkw(fd uintptr, cmd cmdType, lt lockType) error {
 			Start:  0,
 			Len:    0, // All bytes.
 		})
-		if err != unix.EINTR {
+		if !errors.Is(err, unix.EINTR) {
 			return err
 		}
 	}
