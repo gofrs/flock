@@ -18,12 +18,7 @@ import (
 // > The function requests an exclusive lock. Otherwise, it requests a shared lock.
 //
 // https://msdn.microsoft.com/en-us/library/windows/desktop/aa365203(v=vs.85).aspx
-
-const (
-	winLockfileSharedLock      = 0x00000000
-	winLockfileFailImmediately = 0x00000001
-	winLockfileExclusiveLock   = 0x00000002
-)
+const winLockfileSharedLock = 0x00000000
 
 // ErrorLockViolation is the error code returned from the Windows syscall when a lock would block,
 // and you ask to fail immediately.
@@ -37,7 +32,7 @@ const ErrorLockViolation syscall.Errno = 0x21 // 33
 // If we are already locked, this function short-circuits and
 // returns immediately assuming it can take the mutex lock.
 func (f *Flock) Lock() error {
-	return f.lock(&f.l, winLockfileExclusiveLock)
+	return f.lock(&f.l, windows.LOCKFILE_EXCLUSIVE_LOCK)
 }
 
 // RLock is a blocking call to try and take a shared file lock.
@@ -116,7 +111,7 @@ func (f *Flock) Unlock() error {
 // the function will return false instead of waiting for the lock.
 // If we get the lock, we also set the *Flock instance as being exclusive-locked.
 func (f *Flock) TryLock() (bool, error) {
-	return f.try(&f.l, winLockfileExclusiveLock)
+	return f.try(&f.l, windows.LOCKFILE_EXCLUSIVE_LOCK)
 }
 
 // TryRLock is the preferred function for taking a shared file lock.
@@ -147,7 +142,7 @@ func (f *Flock) try(locked *bool, flag uint32) (bool, error) {
 		defer f.ensureFhState()
 	}
 
-	err := windows.LockFileEx(windows.Handle(f.fh.Fd()), flag|winLockfileFailImmediately, 0, 1, 0, &windows.Overlapped{})
+	err := windows.LockFileEx(windows.Handle(f.fh.Fd()), flag|windows.LOCKFILE_FAIL_IMMEDIATELY, 0, 1, 0, &windows.Overlapped{})
 	if err != nil && !errors.Is(err, syscall.Errno(0)) {
 		if errors.Is(err, ErrorLockViolation) || errors.Is(err, syscall.ERROR_IO_PENDING) {
 			return false, nil
