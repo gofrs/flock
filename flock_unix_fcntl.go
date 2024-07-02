@@ -22,7 +22,7 @@ package flock
 import (
 	"errors"
 	"io"
-	"os"
+	"io/fs"
 	"sync"
 	"syscall"
 
@@ -144,8 +144,7 @@ func (f *Flock) doLock(cmd cmdType, lt lockType, blocking bool) (bool, error) {
 
 	if i, dup := inodes[f]; dup && i != ino {
 		mu.Unlock()
-
-		return false, &os.PathError{
+		return false, &fs.PathError{
 			Op:   lt.String(),
 			Path: f.Path(),
 			Err:  errors.New("inode for file changed since last Lock or RLock"),
