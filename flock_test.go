@@ -21,13 +21,34 @@ import (
 type TestSuite struct {
 	suite.Suite
 
+	dir  bool
+	opts []flock.Option
+
 	path  string
 	flock *flock.Flock
 }
 
-func Test(t *testing.T) { suite.Run(t, &TestSuite{}) }
+func Test(t *testing.T) {
+	suite.Run(t, &TestSuite{})
+}
+
+func Test_dir(t *testing.T) {
+	if runtime.GOOS == "windows" {
+		t.Skip("not supported on Windows")
+	}
+
+	suite.Run(t, &TestSuite{dir: true, opts: []flock.Option{flock.SetFlag(os.O_RDONLY)}})
+}
 
 func (s *TestSuite) SetupTest() {
+	if s.dir {
+		s.path = s.T().TempDir()
+
+		s.flock = flock.New(s.path, s.opts...)
+
+		return
+	}
+
 	tmpFile, err := os.CreateTemp(s.T().TempDir(), "go-flock-")
 	s.Require().NoError(err)
 
@@ -41,7 +62,7 @@ func (s *TestSuite) SetupTest() {
 	err = os.Remove(s.path)
 	s.Require().NoError(err)
 
-	s.flock = flock.New(s.path)
+	s.flock = flock.New(s.path, s.opts...)
 }
 
 func (s *TestSuite) TearDownTest() {
@@ -50,7 +71,7 @@ func (s *TestSuite) TearDownTest() {
 }
 
 func (s *TestSuite) TestNew() {
-	f := flock.New(s.path)
+	f := flock.New(s.path, s.opts...)
 	s.Require().NotNil(f)
 
 	s.Equal(f.Path(), s.path)
@@ -90,7 +111,7 @@ func (s *TestSuite) TestFlock_TryLock() {
 
 	// make sure we just return false with no error in cases
 	// where we would have been blocked
-	locked, err = flock.New(s.path).TryLock()
+	locked, err = flock.New(s.path, s.opts...).TryLock()
 	s.Require().NoError(err)
 	s.False(locked)
 }
@@ -110,7 +131,7 @@ func (s *TestSuite) TestFlock_TryRLock() {
 	s.True(locked)
 
 	// shared lock should not block.
-	flock2 := flock.New(s.path)
+	flock2 := flock.New(s.path, s.opts...)
 	locked, err = flock2.TryRLock()
 	s.Require().NoError(err)
 
@@ -131,7 +152,7 @@ func (s *TestSuite) TestFlock_TryRLock() {
 	_ = s.flock.Unlock()
 	_ = flock2.Unlock()
 	_ = s.flock.Lock()
-	locked, err = flock.New(s.path).TryRLock()
+	locked, err = flock.New(s.path, s.opts...).TryRLock()
 	s.Require().NoError(err)
 	s.False(locked)
 }
@@ -147,7 +168,7 @@ func (s *TestSuite) TestFlock_TryLockContext() {
 	// context already canceled
 	cancel()
 
-	locked, err = flock.New(s.path).TryLockContext(ctx, time.Second)
+	locked, err = flock.New(s.path, s.opts...).TryLockContext(ctx, time.Second)
 	s.Require().ErrorIs(err, context.Canceled)
 	s.False(locked)
 
@@ -155,7 +176,7 @@ func (s *TestSuite) TestFlock_TryLockContext() {
 	ctx, cancel = context.WithTimeout(context.Background(), 10*time.Millisecond)
 	defer cancel()
 
-	locked, err = flock.New(s.path).TryLockContext(ctx, time.Second)
+	locked, err = flock.New(s.path, s.opts...).TryLockContext(ctx, time.Second)
 	s.Require().ErrorIs(err, context.DeadlineExceeded)
 	s.False(locked)
 }
@@ -171,7 +192,7 @@ func (s *TestSuite) TestFlock_TryRLockContext() {
 	// context already canceled
 	cancel()
 
-	locked, err = flock.New(s.path).TryRLockContext(ctx, time.Second)
+	locked, err = flock.New(s.path, s.opts...).TryRLockContext(ctx, time.Second)
 	s.Require().ErrorIs(err, context.Canceled)
 	s.False(locked)
 
@@ -182,7 +203,7 @@ func (s *TestSuite) TestFlock_TryRLockContext() {
 	ctx, cancel = context.WithTimeout(context.Background(), 10*time.Millisecond)
 	defer cancel()
 
-	locked, err = flock.New(s.path).TryRLockContext(ctx, time.Second)
+	locked, err = flock.New(s.path, s.opts...).TryRLockContext(ctx, time.Second)
 	s.Require().ErrorIs(err, context.DeadlineExceeded)
 	s.False(locked)
 }
@@ -224,7 +245,7 @@ func (s *TestSuite) TestFlock_Lock() {
 	// Test that Lock() is a blocking call
 	//
 	ch := make(chan error, 2)
-	gf := flock.New(s.path)
+	gf := flock.New(s.path, s.opts...)
 	defer func() { _ = gf.Unlock() }()
 
 	go func(ch chan<- error) {
@@ -266,7 +287,7 @@ func (s *TestSuite) TestFlock_RLock() {
 	// Test that RLock() is a blocking call
 	//
 	ch := make(chan error, 2)
-	gf := flock.New(s.path)
+	gf := flock.New(s.path, s.opts...)
 	defer func() { _ = gf.Unlock() }()
 
 	go func(ch chan<- error) {
