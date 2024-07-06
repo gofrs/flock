@@ -176,9 +176,11 @@ func (f *Flock) setFh() error {
 	return nil
 }
 
-// ensure the file handle is closed if no lock is held.
-func (f *Flock) ensureFhState() {
-	if f.l || f.r || f.fh == nil {
+// resetFh resets file handle:
+// - tries to close the file (ignore errors)
+// - sets fh to nil.
+func (f *Flock) resetFh() {
+	if f.fh == nil {
 		return
 	}
 
@@ -187,11 +189,18 @@ func (f *Flock) ensureFhState() {
 	f.fh = nil
 }
 
+// ensure the file handle is closed if no lock is held.
+func (f *Flock) ensureFhState() {
+	if f.l || f.r || f.fh == nil {
+		return
+	}
+
+	f.resetFh()
+}
+
 func (f *Flock) reset() {
 	f.l = false
 	f.r = false
 
-	_ = f.fh.Close()
-
-	f.fh = nil
+	f.resetFh()
 }
