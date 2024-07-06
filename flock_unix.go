@@ -196,8 +196,7 @@ func (f *Flock) reopenFDOnError(err error) (bool, error) {
 		return false, nil
 	}
 
-	_ = f.fh.Close()
-	f.fh = nil
+	f.resetFh()
 
 	// reopen the file handle
 	err = f.setFh()
