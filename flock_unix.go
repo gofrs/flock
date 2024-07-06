@@ -9,7 +9,6 @@ package flock
 
 import (
 	"errors"
-	"os"
 
 	"golang.org/x/sys/unix"
 )
@@ -200,13 +199,11 @@ func (f *Flock) reopenFDOnError(err error) (bool, error) {
 	_ = f.fh.Close()
 	f.fh = nil
 
-	// reopen in read-write mode and set the file handle
-	fh, err := os.OpenFile(f.path, f.flag, f.perm)
+	// reopen the file handle
+	err = f.setFh()
 	if err != nil {
 		return false, err
 	}
-
-	f.fh = fh
 
 	return true, nil
 }
