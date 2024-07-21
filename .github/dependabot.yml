@@ -21,6 +21,6 @@ updates:
         patterns:
           - "*"  # Group all updates into a single larger pull request.
     schedule:
-      interval: weekly
+      interval: monthly
       day: sunday
       time: "11:00" # 11am UTC
