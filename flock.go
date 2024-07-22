@@ -163,9 +163,9 @@ func tryCtx(ctx context.Context, fn func() (bool, error), retryDelay time.Durati
 	}
 }
 
-func (f *Flock) setFh() error {
+func (f *Flock) setFh(flag int) error {
 	// open a new os.File instance
-	fh, err := os.OpenFile(f.path, f.flag, f.perm)
+	fh, err := os.OpenFile(f.path, flag, f.perm)
 	if err != nil {
 		return err
 	}
