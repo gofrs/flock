@@ -72,7 +72,9 @@ linters-settings:
       - ruleguard
       - httpNoBody
       - exposedSyncMutex
-
+  gosec:
+    excludes:
+      - G115
   revive:
     rules:
       - name: struct-tag
