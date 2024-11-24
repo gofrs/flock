@@ -3,7 +3,7 @@ module github.com/gofrs/flock
 go 1.21.0
 
 require (
-	github.com/stretchr/testify v1.9.0
+	github.com/stretchr/testify v1.10.0
 	golang.org/x/sys v0.27.0
 )
 
