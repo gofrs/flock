@@ -6,7 +6,7 @@ updates:
   - package-ecosystem: gomod
     directory: "/"
     groups:
-      all:
+      gomod:
         patterns:
           - "*"  # Group all updates into a single larger pull request.
     schedule:
@@ -17,7 +17,7 @@ updates:
   - package-ecosystem: github-actions
     directory: /
     groups:
-      all:
+      github-actions:
         patterns:
           - "*"  # Group all updates into a single larger pull request.
     schedule:
