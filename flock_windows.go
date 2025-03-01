@@ -23,6 +23,8 @@ const winLockfileSharedLock = 0x00000000
 
 // ErrorLockViolation is the error code returned from the Windows syscall when a lock would block,
 // and you ask to fail immediately.
+//
+//nolint:errname // It should be renamed to `ErrLockViolation`.
 const ErrorLockViolation windows.Errno = 0x21 // 33
 
 // Lock is a blocking call to try and take an exclusive file lock.
