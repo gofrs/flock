@@ -19,7 +19,7 @@ jobs:
         os: [ubuntu-latest, macos-latest, windows-latest]
     env:
       GO_VERSION: stable
-      GOLANGCI_LINT_VERSION: v1.60
+      GOLANGCI_LINT_VERSION: v1.64
       CGO_ENABLED: 0
     runs-on: ${{ matrix.os }}
 

@@ -32,7 +32,6 @@ linters:
     - nolintlint
     - revive
     - stylecheck
-    - tenv
     - testifylint
     - thelper
     - unconvert
