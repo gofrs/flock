@@ -1,7 +1,6 @@
 module github.com/gofrs/flock
 
-go 1.21.0
-toolchain go1.23.7
+go 1.23.0
 
 require (
 	github.com/stretchr/testify v1.10.0
