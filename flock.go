@@ -62,6 +62,7 @@ type Flock struct {
 func New(path string, opts ...Option) *Flock {
 	// create it if it doesn't exist, and open the file read-only.
 	flags := os.O_CREATE
+
 	switch runtime.GOOS {
 	case "aix", "solaris", "illumos":
 		// AIX cannot preform write-lock (i.e. exclusive) on a read-only file.
@@ -158,7 +159,6 @@ func tryCtx(ctx context.Context, fn func() (bool, error), retryDelay time.Durati
 		case <-ctx.Done():
 			return false, ctx.Err()
 		case <-time.After(retryDelay):
-			// try again
 		}
 	}
 }
