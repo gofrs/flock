@@ -19,7 +19,7 @@ jobs:
         os: [ubuntu-latest, macos-latest, windows-latest]
     env:
       GO_VERSION: stable
-      GOLANGCI_LINT_VERSION: v1.64
+      GOLANGCI_LINT_VERSION: v2.0
       CGO_ENABLED: 0
     runs-on: ${{ matrix.os }}
 
@@ -34,6 +34,6 @@ jobs:
           go-version: ${{ env.GO_VERSION }}
 
       - name: golangci-lint
-        uses: golangci/golangci-lint-action@55c2c1448f86e01eaae002a5a3a9624417608d84 # v6.5.2
+        uses: golangci/golangci-lint-action@1481404843c368bc19ca9406f87d6e0fc97bdcfd # v7.0.0
         with:
           version: ${{ env.GOLANGCI_LINT_VERSION }}

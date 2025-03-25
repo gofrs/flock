@@ -246,6 +246,7 @@ func (s *TestSuite) TestFlock_Lock() {
 	//
 	ch := make(chan error, 2)
 	gf := flock.New(s.path, s.opts...)
+
 	defer func() { _ = gf.Unlock() }()
 
 	go func(ch chan<- error) {
@@ -287,6 +288,7 @@ func (s *TestSuite) TestFlock_RLock() {
 	// Test that RLock() is a blocking call
 	//
 	ch := make(chan error, 2)
+
 	gf := flock.New(s.path, s.opts...)
 	defer func() { _ = gf.Unlock() }()
 
