@@ -3,6 +3,7 @@
 [![Go Reference](https://pkg.go.dev/badge/github.com/gofrs/flock.svg)](https://pkg.go.dev/github.com/gofrs/flock)
 [![License](https://img.shields.io/badge/license-BSD_3--Clause-brightgreen.svg?style=flat)](https://github.com/gofrs/flock/blob/main/LICENSE)
 [![Go Report Card](https://goreportcard.com/badge/github.com/gofrs/flock)](https://goreportcard.com/report/github.com/gofrs/flock)
+[![libs.tech recommends](https://libs.tech/project/41644111/badge.svg)](https://libs.tech/project/41644111/flock)
 
 `flock` implements a thread-safe file lock.
 
