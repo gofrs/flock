@@ -43,7 +43,7 @@ linters:
     - unparam
     - usestdlibvars
     - whitespace
-    - wsl
+    - wsl_v5
   settings:
     gocritic:
       disabled-checks:

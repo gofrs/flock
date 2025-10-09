@@ -155,6 +155,7 @@ func (f *Flock) try(locked *bool, flag int) (bool, error) {
 	}
 
 	var retried bool
+
 retry:
 	err := unix.Flock(int(f.fh.Fd()), flag|unix.LOCK_NB)
 

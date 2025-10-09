@@ -251,7 +251,9 @@ func (s *TestSuite) TestFlock_Lock() {
 
 	go func(ch chan<- error) {
 		ch <- nil
+
 		ch <- gf.Lock()
+
 		close(ch)
 	}(ch)
 
@@ -290,11 +292,14 @@ func (s *TestSuite) TestFlock_RLock() {
 	ch := make(chan error, 2)
 
 	gf := flock.New(s.path, s.opts...)
+
 	defer func() { _ = gf.Unlock() }()
 
 	go func(ch chan<- error) {
 		ch <- nil
+
 		ch <- gf.RLock()
+
 		close(ch)
 	}(ch)
 
