@@ -125,6 +125,22 @@ func (f *Flock) RLocked() bool {
 	return f.r
 }
 
+// Stat returns the FileInfo structure describing the lock file.
+// If the lock file does not exist or cannot be accessed, an error is returned.
+//
+// This can be used to check the modification time of the lock file,
+// which is useful for detecting stale locks.
+func (f *Flock) Stat() (fs.FileInfo, error) {
+	f.m.RLock()
+	defer f.m.RUnlock()
+
+	if f.fh != nil {
+		return f.fh.Stat()
+	}
+
+	return os.Stat(f.path)
+}
+
 func (f *Flock) String() string {
 	return f.path
 }
