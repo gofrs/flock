@@ -313,3 +313,36 @@ func (s *TestSuite) TestFlock_RLock() {
 	s.False(gf.Locked())
 	s.True(gf.RLocked())
 }
+
+func (s *TestSuite) TestFlock_Stat() {
+	// Test Stat when file doesn't exist yet (for non-directory case)
+	if !s.dir {
+		_, err := s.flock.Stat()
+		s.True(os.IsNotExist(err))
+	}
+
+	// Create the lock file
+	locked, err := s.flock.TryLock()
+	s.Require().NoError(err)
+	s.True(locked)
+
+	// Test Stat after lock is acquired
+	info, err := s.flock.Stat()
+	s.Require().NoError(err)
+	s.NotNil(info)
+
+	// Check modification time is recent
+	modTime := info.ModTime()
+	s.WithinDuration(time.Now(), modTime, 1*time.Second)
+
+	// Unlock and verify Stat still works (file persists)
+	err = s.flock.Unlock()
+	s.Require().NoError(err)
+
+	info, err = s.flock.Stat()
+	s.Require().NoError(err)
+	s.NotNil(info)
+
+	// The modification time should be approximately the same as before
+	s.WithinDuration(modTime, info.ModTime(), 100*time.Millisecond)
+}
