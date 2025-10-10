@@ -100,7 +100,7 @@ func (f *Flock) Close() error {
 	return f.Unlock()
 }
 
-// Path returns the path as provided in NewFlock().
+// Path returns the path as provided in New().
 func (f *Flock) Path() string {
 	return f.path
 }
