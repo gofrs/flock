@@ -10,9 +10,9 @@ updates:
         patterns:
           - "*"  # Group all updates into a single larger pull request.
     schedule:
-      interval: weekly
-      day: sunday
-      time: "11:00" # 11am UTC
+      interval: monthly
+    cooldown:
+      default-days: 7
 
   - package-ecosystem: github-actions
     directory: /
@@ -22,5 +22,5 @@ updates:
           - "*"  # Group all updates into a single larger pull request.
     schedule:
       interval: monthly
-      day: sunday
-      time: "11:00" # 11am UTC
+    cooldown:
+      default-days: 7

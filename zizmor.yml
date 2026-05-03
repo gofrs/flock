@@ -1,5 +1,3 @@
 rules:
-  dependabot-cooldown:
-    disable: true
   secrets-outside-env:
     disable: true
