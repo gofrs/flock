@@ -11,37 +11,42 @@ import (
 	"os"
 	"runtime"
 	"testing"
-
-	"github.com/stretchr/testify/assert"
-	"github.com/stretchr/testify/require"
 )
 
 func TestFlock_fh_onError(t *testing.T) {
 	tmpFile, err := os.CreateTemp(t.TempDir(), "go-flock-")
-	require.NoError(t, err)
+	requireNoError(t, err)
 
 	err = tmpFile.Close()
-	require.NoError(t, err)
+	requireNoError(t, err)
 
 	err = os.Remove(tmpFile.Name())
-	require.NoError(t, err)
+	requireNoError(t, err)
 
 	lock := New(tmpFile.Name())
 
 	locked, err := lock.TryLock()
-	require.NoError(t, err)
-	require.True(t, locked)
+	requireNoError(t, err)
+
+	if !locked {
+		t.Fatal("TryLock() = false, want true")
+	}
 
 	newLock := New(tmpFile.Name())
 
 	locked, err = newLock.TryLock()
-	require.NoError(t, err)
-	require.False(t, locked)
+	requireNoError(t, err)
 
-	assert.Nil(t, newLock.fh, "file handle should have been released and be nil")
+	if locked {
+		t.Error("contending TryLock() = true, want false")
+	}
+
+	if newLock.fh != nil {
+		t.Error("file handle should have been released and be nil")
+	}
 
 	err = lock.Unlock()
-	require.NoError(t, err)
+	requireNoError(t, err)
 }
 
 func TestFlock_fh_onError_dir(t *testing.T) {
@@ -54,17 +59,33 @@ func TestFlock_fh_onError_dir(t *testing.T) {
 	lock := New(tmpDir, SetFlag(os.O_RDONLY))
 
 	locked, err := lock.TryLock()
-	require.NoError(t, err)
-	require.True(t, locked)
+	requireNoError(t, err)
+
+	if !locked {
+		t.Fatal("TryLock() = false, want true")
+	}
 
 	newLock := New(tmpDir, SetFlag(os.O_RDONLY))
 
 	locked, err = newLock.TryLock()
-	require.NoError(t, err)
-	require.False(t, locked)
+	requireNoError(t, err)
 
-	assert.Nil(t, newLock.fh, "file handle should have been released and be nil")
+	if locked {
+		t.Error("contending TryLock() = true, want false")
+	}
+
+	if newLock.fh != nil {
+		t.Error("file handle should have been released and be nil")
+	}
 
 	err = lock.Unlock()
-	require.NoError(t, err)
+	requireNoError(t, err)
+}
+
+func requireNoError(t *testing.T, err error) {
+	t.Helper()
+
+	if err != nil {
+		t.Fatal(err)
+	}
 }

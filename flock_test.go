@@ -9,17 +9,17 @@ package flock_test
 
 import (
 	"context"
+	"errors"
 	"os"
 	"runtime"
 	"testing"
 	"time"
 
 	"github.com/gofrs/flock"
-	"github.com/stretchr/testify/suite"
 )
 
 type TestSuite struct {
-	suite.Suite
+	t *testing.T
 
 	dir  bool
 	opts []flock.Option
@@ -29,7 +29,7 @@ type TestSuite struct {
 }
 
 func Test(t *testing.T) {
-	suite.Run(t, &TestSuite{})
+	runTests(t, false, nil)
 }
 
 func Test_dir(t *testing.T) {
@@ -37,30 +37,28 @@ func Test_dir(t *testing.T) {
 		t.Skip("not supported on Windows")
 	}
 
-	suite.Run(t, &TestSuite{dir: true, opts: []flock.Option{flock.SetFlag(os.O_RDONLY)}})
+	runTests(t, true, []flock.Option{flock.SetFlag(os.O_RDONLY)})
 }
 
 func (s *TestSuite) SetupTest() {
 	if s.dir {
-		s.path = s.T().TempDir()
+		s.path = s.t.TempDir()
 
 		s.flock = flock.New(s.path, s.opts...)
 
 		return
 	}
 
-	tmpFile, err := os.CreateTemp(s.T().TempDir(), "go-flock-")
-	s.Require().NoError(err)
-
-	s.Require().NotNil(tmpFile)
+	tmpFile, err := os.CreateTemp(s.t.TempDir(), "go-flock-")
+	s.requireNoError(err)
 
 	s.path = tmpFile.Name()
 
 	err = tmpFile.Close()
-	s.Require().NoError(err)
+	s.requireNoError(err)
 
 	err = os.Remove(s.path)
-	s.Require().NoError(err)
+	s.requireNoError(err)
 
 	s.flock = flock.New(s.path, s.opts...)
 }
@@ -70,70 +68,127 @@ func (s *TestSuite) TearDownTest() {
 	_ = os.Remove(s.path)
 }
 
+func runTests(t *testing.T, dir bool, opts []flock.Option) {
+	t.Helper()
+
+	tests := []struct {
+		name string
+		run  func(*TestSuite)
+	}{
+		{"TestNew", (*TestSuite).TestNew},
+		{"TestFlock_Path", (*TestSuite).TestFlock_Path},
+		{"TestFlock_Locked", (*TestSuite).TestFlock_Locked},
+		{"TestFlock_RLocked", (*TestSuite).TestFlock_RLocked},
+		{"TestFlock_String", (*TestSuite).TestFlock_String},
+		{"TestFlock_TryLock", (*TestSuite).TestFlock_TryLock},
+		{"TestFlock_TryRLock", (*TestSuite).TestFlock_TryRLock},
+		{"TestFlock_TryLockContext", (*TestSuite).TestFlock_TryLockContext},
+		{"TestFlock_TryRLockContext", (*TestSuite).TestFlock_TryRLockContext},
+		{"TestFlock_Unlock", (*TestSuite).TestFlock_Unlock},
+		{"TestFlock_Lock", (*TestSuite).TestFlock_Lock},
+		{"TestFlock_RLock", (*TestSuite).TestFlock_RLock},
+		{"TestFlock_Stat", (*TestSuite).TestFlock_Stat},
+	}
+
+	for _, tc := range tests {
+		t.Run(tc.name, func(t *testing.T) {
+			s := &TestSuite{t: t, dir: dir, opts: opts}
+			s.SetupTest()
+			t.Cleanup(s.TearDownTest)
+			tc.run(s)
+		})
+	}
+}
+
 func (s *TestSuite) TestNew() {
 	f := flock.New(s.path, s.opts...)
-	s.Require().NotNil(f)
+	if f == nil {
+		s.t.Fatal("New() returned nil")
+	}
 
-	s.Equal(f.Path(), s.path)
-	s.False(f.Locked())
-	s.False(f.RLocked())
+	if got := f.Path(); got != s.path {
+		s.t.Errorf("Path() = %q, want %q", got, s.path)
+	}
+
+	s.checkLockState(f, false, false)
 }
 
 func (s *TestSuite) TestFlock_Path() {
-	s.Equal(s.path, s.flock.Path())
+	if got := s.flock.Path(); got != s.path {
+		s.t.Errorf("Path() = %q, want %q", got, s.path)
+	}
 }
 
 func (s *TestSuite) TestFlock_Locked() {
-	s.False(s.flock.Locked())
+	if s.flock.Locked() {
+		s.t.Error("Locked() = true, want false")
+	}
 }
 
 func (s *TestSuite) TestFlock_RLocked() {
-	s.False(s.flock.RLocked())
+	if s.flock.RLocked() {
+		s.t.Error("RLocked() = true, want false")
+	}
 }
 
 func (s *TestSuite) TestFlock_String() {
-	s.Equal(s.path, s.flock.String())
+	if got := s.flock.String(); got != s.path {
+		s.t.Errorf("String() = %q, want %q", got, s.path)
+	}
 }
 
 func (s *TestSuite) TestFlock_TryLock() {
-	s.False(s.flock.Locked())
-	s.False(s.flock.RLocked())
+	s.checkLockState(s.flock, false, false)
 
 	locked, err := s.flock.TryLock()
-	s.Require().NoError(err)
-	s.True(locked)
-	s.True(s.flock.Locked())
-	s.False(s.flock.RLocked())
+	s.requireNoError(err)
+
+	if !locked {
+		s.t.Error("TryLock() = false, want true")
+	}
+
+	s.checkLockState(s.flock, true, false)
 
 	locked, err = s.flock.TryLock()
-	s.Require().NoError(err)
-	s.True(locked)
+	s.requireNoError(err)
+
+	if !locked {
+		s.t.Error("second TryLock() = false, want true")
+	}
 
 	// make sure we just return false with no error in cases
 	// where we would have been blocked
 	locked, err = flock.New(s.path, s.opts...).TryLock()
-	s.Require().NoError(err)
-	s.False(locked)
+	s.requireNoError(err)
+
+	if locked {
+		s.t.Error("contending TryLock() = true, want false")
+	}
 }
 
 func (s *TestSuite) TestFlock_TryRLock() {
-	s.False(s.flock.Locked())
-	s.False(s.flock.RLocked())
+	s.checkLockState(s.flock, false, false)
 
 	locked, err := s.flock.TryRLock()
-	s.Require().NoError(err)
-	s.True(locked)
-	s.False(s.flock.Locked())
-	s.True(s.flock.RLocked())
+	s.requireNoError(err)
+
+	if !locked {
+		s.t.Error("TryRLock() = false, want true")
+	}
+
+	s.checkLockState(s.flock, false, true)
 
 	locked, err = s.flock.TryRLock()
-	s.Require().NoError(err)
-	s.True(locked)
+	s.requireNoError(err)
+
+	if !locked {
+		s.t.Error("second TryRLock() = false, want true")
+	}
 
 	// shared lock should not block.
 	flock2 := flock.New(s.path, s.opts...)
 	locked, err = flock2.TryRLock()
-	s.Require().NoError(err)
+	s.requireNoError(err)
 
 	switch runtime.GOOS {
 	case "aix", "solaris", "illumos":
@@ -142,9 +197,13 @@ func (s *TestSuite) TestFlock_TryRLock() {
 		// when the first descriptor is closed, the second descriptor
 		// would still be open but silently unlocked. So a second
 		// TryRLock must return false.
-		s.False(locked)
+		if locked {
+			s.t.Error("contending TryRLock() = true, want false")
+		}
 	default:
-		s.True(locked)
+		if !locked {
+			s.t.Error("contending TryRLock() = false, want true")
+		}
 	}
 
 	// make sure we just return false with no error in cases
@@ -153,8 +212,11 @@ func (s *TestSuite) TestFlock_TryRLock() {
 	_ = flock2.Unlock()
 	_ = s.flock.Lock()
 	locked, err = flock.New(s.path, s.opts...).TryRLock()
-	s.Require().NoError(err)
-	s.False(locked)
+	s.requireNoError(err)
+
+	if locked {
+		s.t.Error("TryRLock() against exclusive lock = true, want false")
+	}
 }
 
 func (s *TestSuite) TestFlock_TryLockContext() {
@@ -162,23 +224,36 @@ func (s *TestSuite) TestFlock_TryLockContext() {
 
 	// happy path
 	locked, err := s.flock.TryLockContext(ctx, time.Second)
-	s.Require().NoError(err)
-	s.True(locked)
+	s.requireNoError(err)
+
+	if !locked {
+		s.t.Error("TryLockContext() = false, want true")
+	}
 
 	// context already canceled
 	cancel()
 
 	locked, err = flock.New(s.path, s.opts...).TryLockContext(ctx, time.Second)
-	s.Require().ErrorIs(err, context.Canceled)
-	s.False(locked)
+	if !errors.Is(err, context.Canceled) {
+		s.t.Fatalf("TryLockContext() error = %v, want %v", err, context.Canceled)
+	}
+
+	if locked {
+		s.t.Error("TryLockContext() with canceled context = true, want false")
+	}
 
 	// timeout
 	ctx, cancel = context.WithTimeout(context.Background(), 10*time.Millisecond)
 	defer cancel()
 
 	locked, err = flock.New(s.path, s.opts...).TryLockContext(ctx, time.Second)
-	s.Require().ErrorIs(err, context.DeadlineExceeded)
-	s.False(locked)
+	if !errors.Is(err, context.DeadlineExceeded) {
+		s.t.Fatalf("TryLockContext() error = %v, want %v", err, context.DeadlineExceeded)
+	}
+
+	if locked {
+		s.t.Error("TryLockContext() after timeout = true, want false")
+	}
 }
 
 func (s *TestSuite) TestFlock_TryRLockContext() {
@@ -186,15 +261,23 @@ func (s *TestSuite) TestFlock_TryRLockContext() {
 
 	// happy path
 	locked, err := s.flock.TryRLockContext(ctx, time.Second)
-	s.Require().NoError(err)
-	s.True(locked)
+	s.requireNoError(err)
+
+	if !locked {
+		s.t.Error("TryRLockContext() = false, want true")
+	}
 
 	// context already canceled
 	cancel()
 
 	locked, err = flock.New(s.path, s.opts...).TryRLockContext(ctx, time.Second)
-	s.Require().ErrorIs(err, context.Canceled)
-	s.False(locked)
+	if !errors.Is(err, context.Canceled) {
+		s.t.Fatalf("TryRLockContext() error = %v, want %v", err, context.Canceled)
+	}
+
+	if locked {
+		s.t.Error("TryRLockContext() with canceled context = true, want false")
+	}
 
 	// timeout
 	_ = s.flock.Unlock()
@@ -204,42 +287,49 @@ func (s *TestSuite) TestFlock_TryRLockContext() {
 	defer cancel()
 
 	locked, err = flock.New(s.path, s.opts...).TryRLockContext(ctx, time.Second)
-	s.Require().ErrorIs(err, context.DeadlineExceeded)
-	s.False(locked)
+	if !errors.Is(err, context.DeadlineExceeded) {
+		s.t.Fatalf("TryRLockContext() error = %v, want %v", err, context.DeadlineExceeded)
+	}
+
+	if locked {
+		s.t.Error("TryRLockContext() after timeout = true, want false")
+	}
 }
 
 func (s *TestSuite) TestFlock_Unlock() {
 	err := s.flock.Unlock()
-	s.Require().NoError(err)
+	s.requireNoError(err)
 
 	// get a lock for us to unlock
 	locked, err := s.flock.TryLock()
-	s.Require().NoError(err)
-	s.True(locked)
-	s.True(s.flock.Locked())
-	s.False(s.flock.RLocked())
+	s.requireNoError(err)
+
+	if !locked {
+		s.t.Error("TryLock() = false, want true")
+	}
+
+	s.checkLockState(s.flock, true, false)
 
 	_, err = os.Stat(s.path)
-	s.False(os.IsNotExist(err))
+	if os.IsNotExist(err) {
+		s.t.Errorf("lock path does not exist: %v", err)
+	}
 
 	err = s.flock.Unlock()
-	s.Require().NoError(err)
-	s.False(s.flock.Locked())
-	s.False(s.flock.RLocked())
+	s.requireNoError(err)
+	s.checkLockState(s.flock, false, false)
 }
 
 func (s *TestSuite) TestFlock_Lock() {
-	s.False(s.flock.Locked())
-	s.False(s.flock.RLocked())
+	s.checkLockState(s.flock, false, false)
 
 	err := s.flock.Lock()
-	s.Require().NoError(err)
-	s.True(s.flock.Locked())
-	s.False(s.flock.RLocked())
+	s.requireNoError(err)
+	s.checkLockState(s.flock, true, false)
 
 	// test that the short-circuit works
 	err = s.flock.Lock()
-	s.Require().NoError(err)
+	s.requireNoError(err)
 
 	//
 	// Test that Lock() is a blocking call
@@ -258,33 +348,35 @@ func (s *TestSuite) TestFlock_Lock() {
 	}(ch)
 
 	errCh, ok := <-ch
-	s.True(ok)
-	s.Require().NoError(errCh)
+	if !ok {
+		s.t.Fatal("lock goroutine exited before attempting to acquire the lock")
+	}
+
+	s.requireNoError(errCh)
 
 	err = s.flock.Unlock()
-	s.Require().NoError(err)
+	s.requireNoError(err)
 
 	errCh, ok = <-ch
-	s.True(ok)
-	s.Require().NoError(errCh)
-	s.False(s.flock.Locked())
-	s.False(s.flock.RLocked())
-	s.True(gf.Locked())
-	s.False(gf.RLocked())
+	if !ok {
+		s.t.Fatal("lock goroutine exited without reporting a result")
+	}
+
+	s.requireNoError(errCh)
+	s.checkLockState(s.flock, false, false)
+	s.checkLockState(gf, true, false)
 }
 
 func (s *TestSuite) TestFlock_RLock() {
-	s.False(s.flock.Locked())
-	s.False(s.flock.RLocked())
+	s.checkLockState(s.flock, false, false)
 
 	err := s.flock.RLock()
-	s.Require().NoError(err)
-	s.False(s.flock.Locked())
-	s.True(s.flock.RLocked())
+	s.requireNoError(err)
+	s.checkLockState(s.flock, false, true)
 
 	// test that the short-circuit works
 	err = s.flock.RLock()
-	s.Require().NoError(err)
+	s.requireNoError(err)
 
 	//
 	// Test that RLock() is a blocking call
@@ -304,37 +396,49 @@ func (s *TestSuite) TestFlock_RLock() {
 	}(ch)
 
 	errCh, ok := <-ch
-	s.True(ok)
-	s.Require().NoError(errCh)
+	if !ok {
+		s.t.Fatal("lock goroutine exited before attempting to acquire the lock")
+	}
+
+	s.requireNoError(errCh)
 
 	err = s.flock.Unlock()
-	s.Require().NoError(err)
+	s.requireNoError(err)
 
 	errCh, ok = <-ch
-	s.True(ok)
-	s.Require().NoError(errCh)
-	s.False(s.flock.Locked())
-	s.False(s.flock.RLocked())
-	s.False(gf.Locked())
-	s.True(gf.RLocked())
+	if !ok {
+		s.t.Fatal("lock goroutine exited without reporting a result")
+	}
+
+	s.requireNoError(errCh)
+	s.checkLockState(s.flock, false, false)
+	s.checkLockState(gf, false, true)
 }
 
 func (s *TestSuite) TestFlock_Stat() {
 	// Test Stat when file doesn't exist yet (for non-directory case)
 	if !s.dir {
 		_, err := s.flock.Stat()
-		s.True(os.IsNotExist(err))
+		if !os.IsNotExist(err) {
+			s.t.Errorf("Stat() error = %v, want an os.ErrNotExist error", err)
+		}
 	}
 
 	// Create the lock file
 	locked, err := s.flock.TryLock()
-	s.Require().NoError(err)
-	s.True(locked)
+	s.requireNoError(err)
+
+	if !locked {
+		s.t.Error("TryLock() = false, want true")
+	}
 
 	// Test Stat after lock is acquired
 	info, err := s.flock.Stat()
-	s.Require().NoError(err)
-	s.NotNil(info)
+	s.requireNoError(err)
+
+	if info == nil {
+		s.t.Fatal("Stat() returned nil FileInfo")
+	}
 
 	// Check modification time is recent
 	modTime := info.ModTime()
@@ -342,12 +446,44 @@ func (s *TestSuite) TestFlock_Stat() {
 
 	// Unlock and verify Stat still works (file persists)
 	err = s.flock.Unlock()
-	s.Require().NoError(err)
+	s.requireNoError(err)
 
 	info, err = s.flock.Stat()
-	s.Require().NoError(err)
-	s.NotNil(info)
+	s.requireNoError(err)
+
+	if info == nil {
+		s.t.Fatal("Stat() returned nil FileInfo")
+	}
 
 	// The modification time should be approximately the same as before
 	s.WithinDuration(modTime, info.ModTime(), 100*time.Millisecond)
+}
+
+func (s *TestSuite) WithinDuration(want, got time.Time, delta time.Duration) {
+	s.t.Helper()
+
+	difference := got.Sub(want)
+	if difference < -delta || difference > delta {
+		s.t.Errorf("time difference = %v, want within %v (got %v, want %v)", difference, delta, got, want)
+	}
+}
+
+func (s *TestSuite) checkLockState(f *flock.Flock, locked, rlocked bool) {
+	s.t.Helper()
+
+	if got := f.Locked(); got != locked {
+		s.t.Errorf("Locked() = %v, want %v", got, locked)
+	}
+
+	if got := f.RLocked(); got != rlocked {
+		s.t.Errorf("RLocked() = %v, want %v", got, rlocked)
+	}
+}
+
+func (s *TestSuite) requireNoError(err error) {
+	s.t.Helper()
+
+	if err != nil {
+		s.t.Fatal(err)
+	}
 }
