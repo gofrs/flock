@@ -8,6 +8,7 @@
 package flock
 
 import (
+	"context"
 	"os"
 	"runtime"
 	"testing"
@@ -15,6 +16,28 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
+
+func TestTryCtxDoesNotRetryAfterCancellation(t *testing.T) {
+	// With a zero retry delay, the timer and cancellation can both be ready.
+	// Exercise both select outcomes without sleeping.
+	for range 100 {
+		ctx, cancel := context.WithCancel(context.Background())
+		attempts := 0
+		locked, err := tryCtx(ctx, func() (bool, error) {
+			cancel()
+
+			attempts++
+
+			return attempts > 1, nil
+		}, 0)
+
+		cancel()
+
+		require.ErrorIs(t, err, context.Canceled)
+		require.False(t, locked)
+		require.Equal(t, 1, attempts)
+	}
+}
 
 func TestFlock_fh_onError(t *testing.T) {
 	tmpFile, err := os.CreateTemp(t.TempDir(), "go-flock-")
