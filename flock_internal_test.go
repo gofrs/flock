@@ -8,6 +8,7 @@
 package flock
 
 import (
+	"context"
 	"os"
 	"runtime"
 	"testing"
@@ -67,4 +68,26 @@ func TestFlock_fh_onError_dir(t *testing.T) {
 
 	err = lock.Unlock()
 	require.NoError(t, err)
+}
+
+func Test_tryCtx_contextCancellation(t *testing.T) {
+	for range 3 {
+		ctx, cancel := context.WithCancel(context.Background())
+
+		var attempts int
+
+		locked, err := tryCtx(ctx, func() (bool, error) {
+			cancel()
+
+			attempts++
+
+			return attempts > 1, nil
+		}, 0)
+
+		cancel()
+
+		assert.Equal(t, 1, attempts)
+		assert.False(t, locked)
+		require.ErrorIs(t, err, context.Canceled)
+	}
 }
